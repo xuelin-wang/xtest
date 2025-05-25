@@ -2,12 +2,18 @@
  :deps {org.clojure/clojure {:mvn/version "1.12.0"}
         weave/core {:git/url "https://github.com/nakkaya/weave/"
                      :git/sha "22fb518363fcf5390c42cbdd711ee8232e7c8315"}
+        ring/ring-jetty-adapter {:mvn/version "1.14.1"}
+        metosin/reitit {:mvn/version "0.9.0"}
+        ring/ring-json {:mvn/version "0.5.1"}
         }
  :aliases
  {:run-m {:main-opts ["-m" "xtest.xtest"]}
   :run-x {:ns-default xtest.xtest
           :exec-fn start
           }
+
+  :run-api {:main-opts ["-m" "xtest.api.server"]}
+
   :build {:deps {io.github.clojure/tools.build
                  {:mvn/version "0.10.8"}}
           :ns-default build}

@@ -37,7 +37,8 @@ A project has attributes: id, description.
 
 * users
 
-User/password pairs for user management.  
+ A user is identified by email address. Each user has a password created when creating the user.
+ Passwords must be at least 10 characters long, contain at least one lowercase ASCII letter, one uppercase ASCII letter, one digit, and one special symbol from the set: `! @ # $ % ^ & * ( ) - _ = + [ ] { } | / \ < > , . : ; " '`
 
 * roles
   * admin: can manager users
@@ -46,9 +47,15 @@ User/password pairs for user management.
 
 * variables
 
-A variable has name and value. The purpose of a variable is to be used in steps.
+A variable has name. A vriable assignment assign a value to a variable.
+
+A variables environment is a list of variables assignments.
+
+A test step definition may have a list of variable parameters. An actual step in a test case must assign values to these parameters.
 
 * steps
+
+An actual test step is a step definition with parameters assigned.
 
 
 * cases
@@ -57,7 +64,7 @@ cases are organized by tagging. Example, for hierarchy, tag a case as A/B/C.
 Each case has:
     * title: unique
     * id: system assigned
-    * steps: description of test steps.
+    * steps: description of test steps. Each step specifies a step definition and how the parameters are assigned.
 
 * runs
 
