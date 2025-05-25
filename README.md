@@ -1,1 +1,75 @@
 # xtest
+
+## web ui
+Use weave (https://github.com/nakkaya/weave) for simple 
+model without splitting frontend and backend.
+Web server uses 8090
+
+```
+clj -X:run-x
+```
+
+## database
+XTDB in docker, saved in local directory. Bi-teimporality.
+
+```
+mkdir -p ~/xtest-xtdb-data
+
+# 5432: Postgres wire-compatible server (primary API)
+# 8080: Monitoring/healthz HTTP endpoints
+# 3000: HTTP query/tx API
+docker run -it --pull=always \
+-p 5432:5432 \
+-p 8080:8080 \
+-p 3000:3000 \
+-v ~/xtest-xtdb-data:/var/lib/xtdb \
+ghcr.io/xtdb/xtdb
+
+```
+
+## rest service
+### apis
+* projects
+
+Cases and runs have exactly 1 owner project.
+
+A project has attributes: id, description.
+
+* users
+
+User/password pairs for user management.  
+
+* roles
+  * admin: can manager users
+  * tester: can add cases, runs. A tester has a project id(s) assigned. The tester can only
+  manager data for the assigned project(s).
+
+* variables
+
+A variable has name and value. The purpose of a variable is to be used in steps.
+
+* steps
+
+
+* cases
+  
+cases are organized by tagging. Example, for hierarchy, tag a case as A/B/C.
+Each case has:
+    * title: unique
+    * id: system assigned
+    * steps: description of test steps.
+
+* runs
+
+Each run has attributes: id, time, start_time, end_time. A run is a list of tests runs.
+Each test run contains: case_id, start_time, end_time, logs, result
+
+    * run result: pass, fail. 
+
+* reports
+
+A report is usually the aggregated results of a test run.
+
+* attachments
+
+Each case, tests run, test run, project, report can have a number attachments linked to them.

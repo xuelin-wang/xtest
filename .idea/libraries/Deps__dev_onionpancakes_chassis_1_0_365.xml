@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="Deps: dev.onionpancakes/chassis:1.0.365">
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/dev/onionpancakes/chassis/1.0.365/chassis-1.0.365.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

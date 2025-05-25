@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="Deps: com.cnuernber/charred:1.034">
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/com/cnuernber/charred/1.034/charred-1.034.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="Deps: backtick:0.3.5">
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/backtick/backtick/0.3.5/backtick-0.3.5.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
