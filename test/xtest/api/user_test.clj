@@ -29,7 +29,8 @@
           (is (= 201 (:status response)))
           (is (= @inserted-user body))
           (is (string? (:id body)))
-          (is (= pw (:password body))))))))
+          (is (string? (:password body)))
+          (is (not= pw (:password body))))))))
 
 (deftest get-user-by-email-tests
   (testing "returns 400 when email param is missing"

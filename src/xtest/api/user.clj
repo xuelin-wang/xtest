@@ -1,5 +1,6 @@
 (ns xtest.api.user
-  (:require [xtest.api.db :as db]))
+  (:require [xtest.api.db :as db])
+  (:import (com.password4j Password)))
 
 ;; Allowed special symbols for passwords
 (def ^:private special-chars
@@ -26,14 +27,17 @@
        {:status 400
         :body {:error "Password must be at least 10 characters long, have at least one lowercase ASCII letter, one uppercase ASCII letter, one digit, and one special symbol (e.g. ! @ # $ % ^ & * ( ) - _ = + [ ] { } | / \\ < > , . : ; \" ')."}}
        (let [id (str (java.util.UUID/randomUUID))
+             hash (-> (Password/hash password)
+                      .withArgon2
+                      .getResult)
              user {:id id
                    :first-name first-name
                    :last-name last-name
                    :email email
-                   :password password}
+                   :password hash}
              inserted (db/insert-user! user)]
-         {:status 201
-          :body inserted}))))
+        {:status 201
+         :body inserted}))))
 
 (defn get-user-by-email
   "Retrieves a user by email via URL query parameters.
