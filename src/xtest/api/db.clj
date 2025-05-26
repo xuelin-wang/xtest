@@ -46,3 +46,16 @@
       ["SELECT _id, first_name, last_name, email, password
          FROM user WHERE email = ?" email]
       {:builder-fn rs/as-unqualified-kebab-maps})))
+
+(defn update-user!
+  "Updates a user in the user table. Expects keys :id, :first-name, :last-name, :email, :password.
+   Returns the updated user map."
+  [user]
+  (jdbc/execute! ds
+    ["UPDATE user SET first_name = ?, last_name = ?, email = ?, password = ? WHERE _id = ?"
+     (:first-name user)
+     (:last-name user)
+     (:email user)
+     (:password user)
+     (:id user)])
+  user)

@@ -80,3 +80,24 @@ A report is usually the aggregated results of a test run.
 * attachments
 
 Each case, tests run, test run, project, report can have a number attachments linked to them.
+
+### example commands
+```
+# create a user
+curl -i -X POST http://localhost:3100/users/create          -H "Content-Type: application/json"          -d '{
+               "first-name": "Alice",
+               "last-name" : "Smith3",
+               "email"     : "alice.smith3@example.com",
+               "password"  : "Secur3P@ssword!"
+
+# fetch a user
+ curl -G http://localhost:3100/users/get          -H "Accept: application/json"          --data-urlencode "email=alice.smith3@example.com"
+ 
+ # update password
+ curl -i -X POST http://localhost:3100/users/update          -H "Content-Type: application/json"          -d '{
+               "new-password": "abcdeABCDE01!",
+               "email"     : "alice.smith3@example.com",
+               "original-password"  : "Secur3P@ssword!"
+
+
+```

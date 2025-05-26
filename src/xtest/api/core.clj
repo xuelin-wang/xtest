@@ -9,7 +9,8 @@
   (ring/ring-handler
     (ring/router
       [["/users/create" {:post user/create-user}]
-       ["/users/get"    {:get  user/get-user-by-email}]]
+       ["/users/get"    {:get  user/get-user-by-email}]
+       ["/users/update" {:post user/update-user}]]
       {:data {:middleware [wrap-params
                            [wrap-json-body {:keywords? true}]
                            wrap-json-response]}})

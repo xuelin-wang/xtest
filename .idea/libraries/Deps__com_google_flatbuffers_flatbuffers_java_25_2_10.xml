@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="Deps: com.google.flatbuffers/flatbuffers-java:25.2.10">
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/com/google/flatbuffers/flatbuffers-java/25.2.10/flatbuffers-java-25.2.10.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

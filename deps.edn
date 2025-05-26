@@ -7,6 +7,9 @@
         ring/ring-json {:mvn/version "0.5.1"}
         com.xtdb/xtdb-api {:mvn/version "2.0.0-beta8.1"}
         com.github.seancorfield/next.jdbc {:mvn/version "1.3.1002"}
+        ;; https://mvnrepository.com/artifact/org.clojure/data.json
+        org.clojure/data.json {:mvn/version "2.5.1"}
+        clj-http/clj-http {:mvn/version "3.13.0"}
         com.password4j/password4j {:mvn/version "1.8.2"}
         }
  :aliases
