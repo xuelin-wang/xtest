@@ -35,5 +35,14 @@
   (first
     (jdbc/execute! ds
       ["SELECT _id, first_name, last_name, email, password
-         FROM user WHERE id = ?" id]
+         FROM user WHERE _id = ?" id]
+      {:builder-fn rs/as-unqualified-kebab-maps})))
+
+(defn get-user-by-email
+  "Retrieves a user by email. Returns a map with kebab-case keys or nil if not found."
+  [email]
+  (first
+    (jdbc/execute! ds
+      ["SELECT _id, first_name, last_name, email, password
+         FROM user WHERE email = ?" email]
       {:builder-fn rs/as-unqualified-kebab-maps})))

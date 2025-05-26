@@ -15,7 +15,7 @@
        (re-find #"[0-9]" password)
        (some special-chars password)))
 
-(defn create-user
+ (defn create-user
    "Creates a new user with provided first-name, last-name, email, and password.
    Expects a Ring request map with JSON body parsed as keywords.
    Returns a Ring response map with status 201 and created user in the body,
@@ -34,3 +34,17 @@
              inserted (db/insert-user! user)]
          {:status 201
           :body inserted}))))
+
+(defn get-user-by-email
+  "Retrieves a user by email via URL query parameters.
+  Returns 400 if missing 'email', 404 if not found, or 200 with the user map."
+  [{:keys [query-params]}]
+  (let [email (get query-params "email")]
+    (if-not (seq email)
+      {:status 400
+       :body   {:error "Missing query parameter 'email'"}}
+      (if-let [u (db/get-user-by-email email)]
+        {:status 200
+         :body   u}
+        {:status 404
+         :body   {:error (format "No user found for email %s" email)}}))))
