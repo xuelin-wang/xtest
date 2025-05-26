@@ -169,6 +169,7 @@
     <orderEntry type="library" name="Deps: medley:1.4.0" level="project" />
     <orderEntry type="library" name="Deps: com.fasterxml.jackson.dataformat/jackson-dataformat-smile:2.10.2" level="project" />
     <orderEntry type="library" name="Deps: com.fasterxml.jackson.datatype/jackson-datatype-jsr310:2.18.3" level="project" />
+    <orderEntry type="library" name="Deps: org.clojure/data.codec:0.2.0" level="project" />
     <orderEntry type="library" name="Deps: javax.xml.bind/jaxb-api:2.4.0-b180830.0359" level="project" />
     <orderEntry type="library" name="Deps: metosin/sieppari:0.0.0-alpha13" level="project" />
     <orderEntry type="library" name="Deps: org.apache.arrow/arrow-compression:18.3.0" level="project" />

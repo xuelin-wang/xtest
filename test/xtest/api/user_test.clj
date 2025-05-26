@@ -3,6 +3,7 @@
             [clojure.string :as str]
             [clojure.data.json :as json]
             [clj-http.client :as http]
+            [next.jdbc :as jdbc]
             [xtest.api.user :as user]
             [xtest.api.db :as db]
             [xtest.api.core :as core]
@@ -62,6 +63,13 @@
       (try
         ;; Start test server
         (db/init-db!)
+        ;; Clear any existing users to ensure clean state
+        (try
+          (let [db-spec {:jdbcUrl (or (System/getenv "XTDB_JDBC_URL")
+                                      "jdbc:postgresql://localhost:5432/xtdb")}
+                ds (jdbc/get-datasource db-spec)]
+            (jdbc/execute! ds ["DELETE FROM user"]))
+          (catch Exception _))
         (reset! server-atom (run-jetty core/app {:port port :join? false}))
         (Thread/sleep 1000) ; Give server time to start
         
@@ -83,6 +91,7 @@
           ;; Fetch user by email via REST GET
           (let [get-response (http/get (str "http://localhost:" port "/users/get")
                                      {:query-params {"email" (:email test-user)}
+                                      :basic-auth [(:email test-user) (:password test-user)]
                                       :as :json})
                 fetched-user (:body get-response)]
             
@@ -112,6 +121,13 @@
       (try
         ;; Start test server
         (db/init-db!)
+        ;; Clear any existing users to ensure clean state
+        (try
+          (let [db-spec {:jdbcUrl (or (System/getenv "XTDB_JDBC_URL")
+                                      "jdbc:postgresql://localhost:5432/xtdb")}
+                ds (jdbc/get-datasource db-spec)]
+            (jdbc/execute! ds ["DELETE FROM user"]))
+          (catch Exception _))
         (reset! server-atom (run-jetty core/app {:port port :join? false}))
         (Thread/sleep 1000)
         
@@ -125,6 +141,7 @@
           ;; Update user password
           (let [update-response (http/post (str "http://localhost:" port "/users/update")
                                          {:headers {"Content-Type" "application/json"}
+                                          :basic-auth [(:email test-user) (:password test-user)]
                                           :body (json/write-str {:email (:email test-user)
                                                                :original-password (:password test-user)
                                                                :new-password new-password})
@@ -134,6 +151,7 @@
             ;; Verify updated password works
             (let [get-response (http/get (str "http://localhost:" port "/users/get")
                                        {:query-params {"email" (:email test-user)}
+                                        :basic-auth [(:email test-user) new-password]
                                         :as :json})
                   fetched-user (:body get-response)]
               (is (= 200 (:status get-response)))
