@@ -7,6 +7,8 @@
     [clojure.data.codec.base64 :as base64]
     [next.jdbc :as jdbc]
     [xtest.api.user :as user]
+    [xtest.api.project :as project]
+    [xtest.api.case :as case]
     [xtest.api.db :as db])
   (:import (com.password4j Password)))
 
@@ -72,7 +74,7 @@
                                      wrap-params
                                      [wrap-json-body {:keywords? true}]
                                      wrap-json-response]}]
-       ["/users/get"    {:get  user/get-user-by-email
+       ["/users/get"    {:get  user/get-users
                          :middleware [wrap-basic-auth
                                      wrap-params
                                      [wrap-json-body {:keywords? true}]
@@ -81,5 +83,40 @@
                          :middleware [wrap-basic-auth
                                      wrap-params
                                      [wrap-json-body {:keywords? true}]
-                                     wrap-json-response]}]])
+                                     wrap-json-response]}]
+       ["/users/delete" {:post user/delete-user
+                         :middleware [wrap-basic-auth
+                                     wrap-params
+                                     [wrap-json-body {:keywords? true}]
+                                     wrap-json-response]}]
+       ["/projects/create" {:post project/create-project
+                           :middleware [wrap-basic-auth
+                                       wrap-params
+                                       [wrap-json-body {:keywords? true}]
+                                       wrap-json-response]}]
+       ["/projects/get"    {:get  project/get-projects
+                           :middleware [wrap-basic-auth
+                                       wrap-params
+                                       [wrap-json-body {:keywords? true}]
+                                       wrap-json-response]}]
+       ["/projects/delete" {:post project/delete-project
+                           :middleware [wrap-basic-auth
+                                       wrap-params
+                                       [wrap-json-body {:keywords? true}]
+                                       wrap-json-response]}]
+       ["/cases/create"    {:post case/create-case
+                           :middleware [wrap-basic-auth
+                                       wrap-params
+                                       [wrap-json-body {:keywords? true}]
+                                       wrap-json-response]}]
+       ["/cases/get"       {:get  case/get-cases
+                           :middleware [wrap-basic-auth
+                                       wrap-params
+                                       [wrap-json-body {:keywords? true}]
+                                       wrap-json-response]}]
+       ["/cases/delete"    {:post case/delete-case
+                           :middleware [wrap-basic-auth
+                                       wrap-params
+                                       [wrap-json-body {:keywords? true}]
+                                       wrap-json-response]}]])
     (ring/create-default-handler)))

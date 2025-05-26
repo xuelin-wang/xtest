@@ -38,19 +38,23 @@
           (is (string? (:password body)))
           (is (not= pw (:password body))))))))
 
-(deftest get-user-by-email-tests
-  (testing "returns 400 when email param is missing"
-    (is (= {:status 400 :body {:error "Missing query parameter 'email'"}}
-           (user/get-user-by-email {:query-params {}}))))
-  (testing "returns 404 when user not found"
-    (with-redefs [db/get-user-by-email (constantly nil)]
-      (is (= {:status 404 :body {:error "No user found for email test@example.com"}}
-             (user/get-user-by-email {:query-params {"email" "test@example.com"}}))))
-  (testing "returns 200 with user when user found"
-    (let [u {:id "1" :first-name "Alice" :last-name "Smith" :email "alice@example.com" :password "Xyz123!@#"}]
-      (with-redefs [db/get-user-by-email (constantly u)]
-        (is (= {:status 200 :body u}
-               (user/get-user-by-email {:query-params {"email" "alice@example.com"}}))))))))
+(deftest get-users-tests
+  (testing "returns all users when no emails param provided"
+    (let [users [{:id "1" :first-name "Alice" :last-name "Smith" :email "alice@example.com" :password "hash1"}
+                 {:id "2" :first-name "Bob" :last-name "Jones" :email "bob@example.com" :password "hash2"}]]
+      (with-redefs [db/get-users (constantly users)]
+        (is (= {:status 200 :body users}
+               (user/get-users {:query-params {}}))))))
+  (testing "returns users by emails when emails param provided"
+    (let [users [{:id "1" :first-name "Alice" :last-name "Smith" :email "alice@example.com" :password "hash1"}
+                 {:id "3" :first-name "Carol" :last-name "White" :email "carol@example.com" :password "hash3"}]]
+      (with-redefs [db/get-users-by-emails (constantly users)]
+        (is (= {:status 200 :body users}
+               (user/get-users {:query-params {"emails" "alice@example.com,carol@example.com"}}))))))
+  (testing "returns empty list when no users found for emails"
+    (with-redefs [db/get-users-by-emails (constantly [])]
+      (is (= {:status 200 :body []}
+             (user/get-users {:query-params {"emails" "nonexistent@example.com"}}))))))
 
 (deftest create-user-and-verify-password-integration
   (testing "creates user via REST API and verifies password matches when fetched by email"
@@ -90,10 +94,11 @@
           
           ;; Fetch user by email via REST GET
           (let [get-response (http/get (str "http://localhost:" port "/users/get")
-                                     {:query-params {"email" (:email test-user)}
+                                     {:query-params {"emails" (:email test-user)}
                                       :basic-auth [(:email test-user) (:password test-user)]
                                       :as :json})
-                fetched-user (:body get-response)]
+                fetched-users (:body get-response)
+                fetched-user (first fetched-users)]
             
             ;; Verify user was fetched successfully
             (is (= 200 (:status get-response)))
@@ -150,10 +155,11 @@
             
             ;; Verify updated password works
             (let [get-response (http/get (str "http://localhost:" port "/users/get")
-                                       {:query-params {"email" (:email test-user)}
+                                       {:query-params {"emails" (:email test-user)}
                                         :basic-auth [(:email test-user) new-password]
                                         :as :json})
-                  fetched-user (:body get-response)]
+                  fetched-users (:body get-response)
+                  fetched-user (first fetched-users)]
               (is (= 200 (:status get-response)))
               (is (-> (Password/check new-password (:password fetched-user))
                       .withArgon2))
@@ -163,3 +169,26 @@
         (finally
           (when @server-atom
             (.stop @server-atom)))))))
+
+(deftest delete-user-validation
+  (testing "returns 400 when id is blank"
+    (let [response (user/delete-user {:body {:id ""}})]
+      (is (= 400 (:status response)))
+      (is (str/includes? (get-in response [:body :error]) "User id is required"))))
+  
+  (testing "returns 404 when user not found"
+    (with-redefs [db/get-user (constantly nil)]
+      (let [response (user/delete-user {:body {:id "nonexistent-id"}})]
+        (is (= 404 (:status response)))
+        (is (str/includes? (get-in response [:body :error]) "No user found with id nonexistent-id"))))))
+
+(deftest delete-user-success
+  (testing "returns 200 and deletes user when valid"
+    (let [user-id "test-user-123"
+          deleted-result (atom nil)]
+      (with-redefs [db/get-user (constantly {:id user-id :email "test@example.com"})
+                    db/delete-user! (fn [id] (reset! deleted-result {:next.jdbc/update-count 1}) @deleted-result)]
+        (let [response (user/delete-user {:body {:id user-id}})]
+          (is (= 200 (:status response)))
+          (is (str/includes? (get-in response [:body :message]) "deleted successfully"))
+          (is (= 1 (get-in response [:body :rows-affected]))))))))

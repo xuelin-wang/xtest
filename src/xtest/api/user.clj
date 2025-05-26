@@ -39,19 +39,21 @@
         {:status 201
          :body inserted}))))
 
-(defn get-user-by-email
-  "Retrieves a user by email via URL query parameters.
-  Returns 400 if missing 'email', 404 if not found, or 200 with the user map."
+(defn get-users
+  "Retrieves users by emails via URL query parameters.
+  If 'emails' parameter is provided as comma-separated list, returns users with those emails.
+  If no 'emails' parameter is provided, returns all users.
+  Returns 200 with the user maps or empty list if none found."
   [{:keys [query-params]}]
-  (let [email (get query-params "email")]
-    (if-not (seq email)
-      {:status 400
-       :body   {:error "Missing query parameter 'email'"}}
-      (if-let [u (db/get-user-by-email email)]
+  (let [emails-param (get query-params "emails")
+        emails (when emails-param (clojure.string/split emails-param #","))]
+    (if emails
+      (let [users (db/get-users-by-emails emails)]
         {:status 200
-         :body   u}
-        {:status 404
-         :body   {:error (format "No user found for email %s" email)}}))))
+         :body users})
+      (let [users (db/get-users)]
+        {:status 200
+         :body users}))))
 
 (defn update-user
   "Updates a user's password with provided email, original password, and new password.
@@ -79,3 +81,25 @@
          :body {:error "Original password is incorrect"}})
       {:status 404
        :body {:error (format "No user found for email %s" email)}})))
+
+(defn delete-user
+  "Deletes a user by id via JSON body.
+   Expects a Ring request map with JSON body containing :id.
+   Returns a Ring response map with status 200 if deleted successfully,
+   or status 404 if the user is not found."
+  [{:keys [body]}]
+  (let [{:keys [id]} body]
+    (cond
+      (clojure.string/blank? id)
+      {:status 400
+       :body {:error "User id is required"}}
+      
+      (not (db/get-user id))
+      {:status 404
+       :body {:error (format "No user found with id %s" id)}}
+      
+      :else
+      (let [result (db/delete-user! id)]
+        {:status 200
+         :body {:message (format "User with id %s deleted successfully" id)
+                :rows-affected (:next.jdbc/update-count result)}}))))
