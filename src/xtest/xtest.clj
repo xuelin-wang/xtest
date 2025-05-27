@@ -168,7 +168,8 @@
 
 ;; Login application with API integration
 (let [auth-state (atom {:logged-in? false :user nil :credentials nil})
-      login-message (atom nil)]
+      login-message (atom nil)
+      users-data (atom nil)]
 
   (defn- encode-basic-auth [email password]
     "Encode email and password for HTTP Basic Auth"
@@ -226,10 +227,13 @@
              :variant :primary
              :data-on-click (weave/handler
                               (let [response (authenticated-request :get "http://localhost:3100/users/get")]
-                                (reset! login-message 
-                                        (if (= 200 (:status response))
-                                          {:type :success :text (str "Found " (count (:body response)) " users")}
-                                          {:type :error :text (str "Error: " (get-in response [:body :error]))})))
+                                (if (= 200 (:status response))
+                                  (do
+                                    (reset! users-data (:body response))
+                                    (reset! login-message {:type :success :text (str "Found " (count (:body response)) " users")}))
+                                  (do
+                                    (reset! users-data nil)
+                                    (reset! login-message {:type :error :text (str "Error: " (get-in response [:body :error]))}))))
                               (weave/push-html! (login-view)))}
             "Test API - Get Users"]
            [::c/button
@@ -238,11 +242,40 @@
              :data-on-click (weave/handler
                               (reset! auth-state {:logged-in? false :user nil :credentials nil})
                               (reset! login-message nil)
+                              (reset! users-data nil)
                               (weave/push-html! (login-view)))}
             "Logout"]]
           (when @login-message
             [::c/alert.mt-4 {:type (:type @login-message)}
-             (:text @login-message)])]
+             (:text @login-message)])
+          
+          ;; Users table when data is available
+          (when @users-data
+            [:div.mt-6.w-full
+             [:h3.text-lg.font-semibold.mb-3.text-center "Users List"]
+             [:div.overflow-x-auto
+              [:table.min-w-full.bg-white.border.border-gray-300.rounded-lg
+               [:thead.bg-gray-50
+                [:tr
+                 [:th.px-4.py-2.text-left.text-xs.font-medium.text-gray-500.uppercase.tracking-wider.border-b "Email"]
+                 [:th.px-4.py-2.text-left.text-xs.font-medium.text-gray-500.uppercase.tracking-wider.border-b "First Name"]
+                 [:th.px-4.py-2.text-left.text-xs.font-medium.text-gray-500.uppercase.tracking-wider.border-b "Last Name"]]]
+               [:tbody.bg-white.divide-y.divide-gray-200
+                (map-indexed
+                  (fn [idx user]
+                    [:tr {:key idx :class (if (even? idx) "bg-gray-50" "bg-white")}
+                     [:td.px-4.py-2.text-sm.text-gray-900.border-b (:email user)]
+                     [:td.px-4.py-2.text-sm.text-gray-900.border-b (:first-name user)]
+                     [:td.px-4.py-2.text-sm.text-gray-900.border-b (:last-name user)]])
+                  @users-data)]]]
+             [::c/button.mt-4
+              {:size :md
+               :variant :secondary
+               :data-on-click (weave/handler
+                                (reset! users-data nil)
+                                (reset! login-message nil)
+                                (weave/push-html! (login-view)))}
+              "Clear Table"]])]
          
          ;; Login form when not logged in
          [:div
