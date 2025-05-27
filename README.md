@@ -83,7 +83,7 @@ Each case, tests run, test run, project, report can have a number attachments li
 
 ### example commands
 ```
-# create a user
+# create a user (first, no basic token passed)
 curl -i -X POST http://localhost:3100/users/create          -H "Content-Type: application/json"          -d '{
                "first-name": "Alice",
                "last-name" : "Smith3",
@@ -91,13 +91,28 @@ curl -i -X POST http://localhost:3100/users/create          -H "Content-Type: ap
                "password"  : "Secur3P@ssword!"
 
 # fetch a user
- curl -G http://localhost:3100/users/get          -H "Accept: application/json"          --data-urlencode "email=alice.smith3@example.com"
+ curl -G http://localhost:3100/users/get   \
+ -H "Authorization: Basic YWxpY2Uuc21pdGgzQGV4YW1wbGUuY29tOlNlY3VyM1BAc3N3b3JkIQ=="   \
+        -H "Accept: application/json"          --data-urlencode "email=alice.smith3@example.com"
  
  # update password
- curl -i -X POST http://localhost:3100/users/update          -H "Content-Type: application/json"          -d '{
+ curl -i -X POST http://localhost:3100/users/update      \
+  -H "Authorization: Basic YWxpY2Uuc21pdGgzQGV4YW1wbGUuY29tOlNlY3VyM1BAc3N3b3JkIQ=="   \
+     -H "Content-Type: application/json"          -d '{
                "new-password": "abcdeABCDE01!",
                "email"     : "alice.smith3@example.com",
                "original-password"  : "Secur3P@ssword!"
 
+
+# pass basic token of existing user
+curl -i -X POST http://localhost:3100/users/create   -H "Authorization: Basic YWxpY2Uuc21pdGgzQGV4YW1wbGUuY29tOlNlY3VyM1BAc3N3b3JkIQ=="        -H "Content-Type: application/json"          -d '{
+               "first-name": "Alice",
+               "last-name" : "Smith3",
+               "email"     : "alice.smith2@example.com",
+               "password"  : "Secur3P@ssword!"
+             }'
+
+
+ curl -X POST "http://localhost:3100/users/login"        -H "Content-Type: application/json"        -d '{"email":"alice.smith3@example.com","password":"Secur3P@ssword!"}'
 
 ```

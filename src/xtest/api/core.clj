@@ -89,6 +89,10 @@
                                      wrap-params
                                      [wrap-json-body {:keywords? true}]
                                      wrap-json-response]}]
+       ["/users/login"  {:post user/login
+                         :middleware [wrap-params
+                                     [wrap-json-body {:keywords? true}]
+                                     wrap-json-response]}]
        ["/projects/create" {:post project/create-project
                            :middleware [wrap-basic-auth
                                        wrap-params

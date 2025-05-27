@@ -55,7 +55,7 @@
     <orderEntry type="library" name="Deps: com.github.luben/zstd-jni:1.5.7-2" level="project" />
     <orderEntry type="library" name="Deps: org.clojure/tools.macro:0.1.5" level="project" />
     <orderEntry type="library" name="Deps: lambdaisland/deep-diff:0.0-47" level="project" />
-    <orderEntry type="library" name="Deps: com.fasterxml.jackson.dataformat/jackson-dataformat-cbor:2.10.2" level="project" />
+    <orderEntry type="library" name="Deps: com.fasterxml.jackson.dataformat/jackson-dataformat-cbor:2.18.3" level="project" />
     <orderEntry type="library" name="Deps: com.googlecode.json-simple/json-simple:1.1.1" level="project" />
     <orderEntry type="library" name="Deps: ring/ring-defaults:0.5.0" level="project" />
     <orderEntry type="library" name="Deps: datastar/ring:65a301" level="project" />
@@ -128,7 +128,7 @@
     <orderEntry type="library" name="Deps: crypto-equality:1.0.1" level="project" />
     <orderEntry type="library" name="Deps: org.checkerframework/checker-qual:3.48.3" level="project" />
     <orderEntry type="library" name="Deps: org.eclipse.jetty.ee9/jetty-ee9-security:12.0.18" level="project" />
-    <orderEntry type="library" name="Deps: cheshire:5.10.0" level="project" />
+    <orderEntry type="library" name="Deps: cheshire:6.0.0" level="project" />
     <orderEntry type="library" name="Deps: tigris:0.1.2" level="project" />
     <orderEntry type="library" name="Deps: metosin/reitit-sieppari:0.9.0" level="project" />
     <orderEntry type="library" name="Deps: babashka/process:0.1.7" level="project" />
@@ -167,7 +167,7 @@
     <orderEntry type="library" name="Deps: ring/ring-core:1.14.1" level="project" />
     <orderEntry type="library" name="Deps: meta-merge:1.0.0" level="project" />
     <orderEntry type="library" name="Deps: medley:1.4.0" level="project" />
-    <orderEntry type="library" name="Deps: com.fasterxml.jackson.dataformat/jackson-dataformat-smile:2.10.2" level="project" />
+    <orderEntry type="library" name="Deps: com.fasterxml.jackson.dataformat/jackson-dataformat-smile:2.18.3" level="project" />
     <orderEntry type="library" name="Deps: com.fasterxml.jackson.datatype/jackson-datatype-jsr310:2.18.3" level="project" />
     <orderEntry type="library" name="Deps: org.clojure/data.codec:0.2.0" level="project" />
     <orderEntry type="library" name="Deps: javax.xml.bind/jaxb-api:2.4.0-b180830.0359" level="project" />

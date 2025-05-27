@@ -192,3 +192,121 @@
           (is (= 200 (:status response)))
           (is (str/includes? (get-in response [:body :message]) "deleted successfully"))
           (is (= 1 (get-in response [:body :rows-affected]))))))))
+
+(deftest login-validation
+  (testing "returns 400 when email parameter is missing"
+    (let [response (user/login {:body {:password "test123"}})]
+      (is (= 400 (:status response)))
+      (is (str/includes? (get-in response [:body :error]) "Email parameter is required"))))
+  
+  (testing "returns 400 when password parameter is missing"
+    (let [response (user/login {:body {:email "test@example.com"}})]
+      (is (= 400 (:status response)))
+      (is (str/includes? (get-in response [:body :error]) "Password parameter is required"))))
+  
+  (testing "returns 400 when email parameter is blank"
+    (let [response (user/login {:body {:email "" :password "test123"}})]
+      (is (= 400 (:status response)))
+      (is (str/includes? (get-in response [:body :error]) "Email parameter is required"))))
+  
+  (testing "returns 400 when password parameter is blank"
+    (let [response (user/login {:body {:email "test@example.com" :password ""}})]
+      (is (= 400 (:status response)))
+      (is (str/includes? (get-in response [:body :error]) "Password parameter is required")))))
+
+(deftest login-authentication
+  (testing "returns 401 when user not found"
+    (with-redefs [db/get-user-by-email (constantly nil)]
+      (let [response (user/login {:body {:email "nonexistent@example.com" :password "test123"}})]
+        (is (= 401 (:status response)))
+        (is (str/includes? (get-in response [:body :error]) "User not found")))))
+  
+  (testing "returns 401 when password is incorrect"
+    (let [valid-hash (-> (Password/hash "correctpassword") .withArgon2 .getResult)
+          user {:id "1" :first-name "John" :last-name "Doe" :email "john@example.com" :password valid-hash}]
+      (with-redefs [db/get-user-by-email (constantly user)]
+        (let [response (user/login {:body {:email "john@example.com" :password "wrongpassword"}})]
+          (is (= 401 (:status response)))
+          (is (str/includes? (get-in response [:body :error]) "Invalid password"))))))
+  
+  (testing "returns 200 when credentials are valid - using actual password hashing"
+    (let [plain-password "TestPassword123!"
+          hashed-password (-> (Password/hash plain-password) .withArgon2 .getResult)
+          user {:id "1" :first-name "John" :last-name "Doe" :email "john@example.com" :password hashed-password}]
+      (with-redefs [db/get-user-by-email (constantly user)]
+        (let [response (user/login {:body {:email "john@example.com" :password plain-password}})]
+          (is (= 200 (:status response)))
+          (is (str/includes? (get-in response [:body :message]) "Login successful"))
+          (is (= "1" (get-in response [:body :user :id])))
+          (is (= "John" (get-in response [:body :user :first-name])))
+          (is (= "Doe" (get-in response [:body :user :last-name])))
+          (is (= "john@example.com" (get-in response [:body :user :email])))
+          (is (nil? (get-in response [:body :user :password]))))))))
+
+(deftest login-integration-test
+  (testing "login via REST API"
+    (let [port 3105
+          server-atom (atom nil)
+          test-user {:first-name "Login"
+                     :last-name "Test"
+                     :email "login@test.com"
+                     :password "LoginPass123!"}]
+      (try
+        (db/init-db!)
+        (try
+          (let [db-spec {:jdbcUrl (or (System/getenv "XTDB_JDBC_URL")
+                                      "jdbc:postgresql://localhost:5432/xtdb")}
+                ds (jdbc/get-datasource db-spec)]
+            (jdbc/execute! ds ["DELETE FROM user"]))
+          (catch Exception _))
+        (reset! server-atom (run-jetty core/app {:port port :join? false}))
+        (Thread/sleep 1000)
+        
+        ;; Create user first
+        (let [create-response (http/post (str "http://localhost:" port "/users/create")
+                                       {:headers {"Content-Type" "application/json"}
+                                        :body (json/write-str test-user)
+                                        :as :json})]
+          (is (= 201 (:status create-response)))
+          
+          ;; Test successful login
+          (let [login-response (http/post (str "http://localhost:" port "/users/login")
+                                        {:headers {"Content-Type" "application/json"}
+                                         :body (json/write-str {:email (:email test-user) 
+                                                               :password (:password test-user)})
+                                         :as :json})]
+            (is (= 200 (:status login-response)))
+            (is (str/includes? (get-in login-response [:body :message]) "Login successful"))
+            (is (= (:email test-user) (get-in login-response [:body :user :email]))))
+          
+          ;; Test failed login with wrong password
+          (let [failed-response (http/post (str "http://localhost:" port "/users/login")
+                                         {:headers {"Content-Type" "application/json"}
+                                          :body (json/write-str {:email (:email test-user) 
+                                                                :password "wrongpassword"})
+                                          :throw-exceptions false})
+                parsed-body (if (string? (:body failed-response))
+                              (json/read-str (:body failed-response) :key-fn keyword)
+                              (:body failed-response))]
+            (is (= 401 (:status failed-response)))
+            (is (map? parsed-body))
+            (is (string? (:error parsed-body)))
+            (is (str/includes? (:error parsed-body) "Invalid password")))
+          
+          ;; Test failed login with nonexistent user
+          (let [failed-response (http/post (str "http://localhost:" port "/users/login")
+                                         {:headers {"Content-Type" "application/json"}
+                                          :body (json/write-str {:email "nonexistent@test.com" 
+                                                                :password "anypassword"})
+                                          :throw-exceptions false})
+                parsed-body (if (string? (:body failed-response))
+                              (json/read-str (:body failed-response) :key-fn keyword)
+                              (:body failed-response))]
+            (is (= 401 (:status failed-response)))
+            (is (map? parsed-body))
+            (is (string? (:error parsed-body)))
+            (is (str/includes? (:error parsed-body) "User not found"))))
+        
+        (finally
+          (when @server-atom
+            (.stop @server-atom)))))))

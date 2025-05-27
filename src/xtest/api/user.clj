@@ -103,3 +103,33 @@
         {:status 200
          :body {:message (format "User with id %s deleted successfully" id)
                 :rows-affected (:next.jdbc/update-count result)}}))))
+
+(defn login
+  "Validates user credentials via JSON body with email and password.
+   Returns 200 with success message if credentials are valid,
+   or 400/401 with error message if invalid."
+  [{:keys [body]}]
+  (let [{:keys [email password]} body]
+    (cond
+      (clojure.string/blank? email)
+      {:status 400
+       :body {:error "Email parameter is required"}}
+      
+      (clojure.string/blank? password)
+      {:status 400
+       :body {:error "Password parameter is required"}}
+      
+      :else
+      (if-let [user (db/get-user-by-email email)]
+        (if (-> (Password/check password (:password user))
+                .withArgon2)
+          {:status 200
+           :body {:message "Login successful"
+                  :user {:id (:id user)
+                         :first-name (:first-name user)
+                         :last-name (:last-name user)
+                         :email (:email user)}}}
+          {:status 401
+           :body {:error "Invalid password"}})
+        {:status 401
+         :body {:error "User not found"}}))))
