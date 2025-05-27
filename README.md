@@ -3,8 +3,9 @@
 ## web ui
 Use weave (https://github.com/nakkaya/weave) for simple 
 model without splitting frontend and backend.
-Web server uses 8090
+Web server uses 9090. Ensure starts api server, db server before testing web page http://localhost:9090
 
+Start ui at port 9090
 ```
 clj -X:run-x
 ```
@@ -28,6 +29,10 @@ ghcr.io/xtdb/xtdb
 ```
 
 ## rest service
+Start api server at port 3100
+```
+clj -M:run-ap
+```
 ### apis
 * projects
 
