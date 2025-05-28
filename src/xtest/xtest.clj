@@ -175,7 +175,8 @@
       selected-project-id (atom nil)
       current-view (atom :dashboard)
       add-user-form (atom {:email "" :first-name "" :last-name "" :password "" :message nil})
-      add-project-form (atom {:name "" :_id "" :message nil})]
+      add-project-form (atom {:name "" :_id "" :message nil})
+      delete-confirmation (atom nil)]
 
   (defn- encode-basic-auth [email password]
     "Encode email and password for HTTP Basic Auth"
@@ -337,16 +338,9 @@
                        {:size :sm
                         :variant :danger
                         :data-on-click (weave/handler
-                                         (let [response (delete-user-by-id (:id user))]
-                                           (if (= 200 (:status response))
-                                             (do
-                                               (reset! login-message {:type :success :text "User deleted successfully"})
-                                               ;; Refresh the users list
-                                               (let [refresh-response (authenticated-request :get "http://localhost:3100/users/get")]
-                                                 (if (= 200 (:status refresh-response))
-                                                   (reset! users-data (:body refresh-response))
-                                                   (reset! login-message {:type :error :text "Error refreshing users list"}))))
-                                             (reset! login-message {:type :error :text (str "Error deleting user: " (get-in response [:body :error]))})))
+                                         (reset! delete-confirmation {:type :user 
+                                                                      :user-id (:id user)
+                                                                      :user-email (:email user)})
                                          (weave/push-html! (login-view)))}
                        "Delete"]]])
                   @users-data)]]]
@@ -360,6 +354,60 @@
                                  (reset! current-view :dashboard)
                                  (weave/push-html! (login-view)))}
                "Clear Table"]]])
+
+          ;; Delete Confirmation Dialog
+          (when @delete-confirmation
+            [:div.fixed.inset-0.bg-gray-600.bg-opacity-50.overflow-y-auto.h-full.w-full.z-50
+             [:div.relative.top-20.mx-auto.p-5.border.w-96.shadow-lg.rounded-md.bg-white
+              [:div.mt-3.text-center
+               [:div.mx-auto.flex.items-center.justify-center.h-12.w-12.rounded-full.bg-red-100
+                [:svg.h-6.w-6.text-red-600 {:fill "none" :viewBox "0 0 24 24" :stroke "currentColor"}
+                 [:path {:stroke-linecap "round" :stroke-linejoin "round" :stroke-width "2" :d "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.962-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"}]]]
+               [:h3.text-lg.leading-6.font-medium.text-gray-900.mt-4 
+                (if (= (:type @delete-confirmation) :user) "Delete User" "Delete Project")]
+               [:div.mt-2.px-7.py-3
+                [:p.text-sm.text-gray-500
+                 (if (= (:type @delete-confirmation) :user)
+                   (str "Are you sure you want to delete user " (:user-email @delete-confirmation) "? This action cannot be undone.")
+                   (str "Are you sure you want to delete project " (:project-name @delete-confirmation) "? This action cannot be undone."))]]
+               [:div.items-center.px-4.py-3.space-x-4.flex.justify-center
+                [::c/button
+                 {:size :md
+                  :variant :secondary
+                  :data-on-click (weave/handler
+                                   (reset! delete-confirmation nil)
+                                   (weave/push-html! (login-view)))}
+                 "Cancel"]
+                [::c/button
+                 {:size :md
+                  :variant :danger
+                  :data-on-click (weave/handler
+                                   (if (= (:type @delete-confirmation) :user)
+                                     ;; Delete user
+                                     (let [response (delete-user-by-id (:user-id @delete-confirmation))]
+                                       (if (= 200 (:status response))
+                                         (do
+                                           (reset! login-message {:type :success :text "User deleted successfully"})
+                                           ;; Refresh the users list
+                                           (let [refresh-response (authenticated-request :get "http://localhost:3100/users/get")]
+                                             (if (= 200 (:status refresh-response))
+                                               (reset! users-data (:body refresh-response))
+                                               (reset! login-message {:type :error :text "Error refreshing users list"}))))
+                                         (reset! login-message {:type :error :text (str "Error deleting user: " (get-in response [:body :error]))})))
+                                     ;; Delete project
+                                     (let [response (delete-project-by-id (:project-id @delete-confirmation))]
+                                       (if (= 200 (:status response))
+                                         (do
+                                           (reset! login-message {:type :success :text "Project deleted successfully"})
+                                           ;; Refresh the projects list
+                                           (let [refresh-response (authenticated-request :get "http://localhost:3100/projects/get")]
+                                             (if (= 200 (:status refresh-response))
+                                               (reset! projects-data (:body refresh-response))
+                                               (reset! login-message {:type :error :text "Error refreshing projects list"}))))
+                                         (reset! login-message {:type :error :text (str "Error deleting project: " (get-in response [:body :error]))}))))
+                                   (reset! delete-confirmation nil)
+                                   (weave/push-html! (login-view)))}
+                 "Yes, Delete"]]]]])
 
           ;; Add User Form
           (when (= @current-view :add-user)
@@ -477,16 +525,9 @@
                         {:size :sm
                          :variant :danger
                          :data-on-click (weave/handler
-                                          (let [response (delete-project-by-id (:id project))]
-                                            (if (= 200 (:status response))
-                                              (do
-                                                (reset! login-message {:type :success :text "Project deleted successfully"})
-                                                ;; Refresh the projects list
-                                                (let [refresh-response (authenticated-request :get "http://localhost:3100/projects/get")]
-                                                  (if (= 200 (:status refresh-response))
-                                                    (reset! projects-data (:body refresh-response))
-                                                    (reset! login-message {:type :error :text "Error refreshing projects list"}))))
-                                              (reset! login-message {:type :error :text (str "Error deleting project: " (get-in response [:body :error]))})))
+                                          (reset! delete-confirmation {:type :project 
+                                                                       :project-id (:id project)
+                                                                       :project-name (:name project)})
                                           (weave/push-html! (login-view)))}
                         "Delete"]]]])
                   @projects-data)]]]
