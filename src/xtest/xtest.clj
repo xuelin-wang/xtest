@@ -647,27 +647,27 @@
                                                   {:precondition (or precondition "")
                                                    :description description
                                                    :postcondition (or postcondition "")})
-                                     tags-data (remove clojure.string/blank?
-                                                       (for [i (range 10)]
-                                                         (get params (keyword (str "tag-" i)))))
-                                     case-data {:_id (:id params)
-                                                :name (:name params)
-                                                :project-id (:project-id @add-case-form)
-                                                :description (or (:description params) "")
-                                                :steps steps-data
-                                                :tags tags-data}]
-                                 (let [response (create-new-case case-data)]
-                                   (if (= 201 (:status response))
-                                     (do
-                                       (reset! login-message {:type :success :text "Case created successfully"})
-                                       (reset! current-view :cases-list)
-                                       (reset! add-case-form {:project-id nil :id "" :name "" :description "" :steps [] :tags [] :message nil :step-data [{:precondition "" :description "" :postcondition ""}]})
-                                       ;; Refresh the cases list
-                                       (let [refresh-response (get-all-cases-by-projects)]
-                                         (if (:success refresh-response)
-                                           (reset! all-cases-by-projects refresh-response)
-                                           (reset! login-message {:type :error :text "Error refreshing cases list"}))))
-                                     (swap! add-case-form assoc :message {:type :error :text (str "Error creating case: " (get-in response [:body :error]))}))))))
+                                   tags-data (remove clojure.string/blank?
+                                                     (for [i (range 10)]
+                                                       (get params (keyword (str "tag-" i)))))
+                                   case-data {:_id (:id params)
+                                              :name (:name params)
+                                              :project-id (:project-id @add-case-form)
+                                              :description (or (:description params) "")
+                                              :steps steps-data
+                                              :tags tags-data}]
+                               (let [response (create-new-case case-data)]
+                                 (if (= 201 (:status response))
+                                   (do
+                                     (reset! login-message {:type :success :text "Case created successfully"})
+                                     (reset! current-view :cases-list)
+                                     (reset! add-case-form {:project-id nil :id "" :name "" :description "" :steps [] :tags [] :message nil :step-data [{:precondition "" :description "" :postcondition ""}]})
+                                     ;; Refresh the cases list
+                                     (let [refresh-response (get-all-cases-by-projects)]
+                                       (if (:success refresh-response)
+                                         (reset! all-cases-by-projects refresh-response)
+                                         (reset! login-message {:type :error :text "Error refreshing cases list"}))))
+                                   (swap! add-case-form assoc :message {:type :error :text (str "Error creating case: " (get-in response [:body :error]))}))))))
                            (weave/push-html! (login-view)))}
 
         ;; Basic fields
@@ -676,11 +676,13 @@
           {:name "id"
            :type "text"
            :placeholder "Enter case ID"
+           :value ""
            :label "Case ID"}]
          [::c/input
           {:name "name"
            :type "text"
            :placeholder "Enter case name"
+           :value ""
            :label "Case Name"}]]
 
         [::c/input
