@@ -31,7 +31,7 @@ ghcr.io/xtdb/xtdb
 ## rest service
 Start api server at port 3100
 ```
-clj -M:run-ap
+clj -M:run-api
 ```
 ### apis
 * projects
@@ -88,17 +88,20 @@ Each case, tests run, test run, project, report can have a number attachments li
 
 ### example commands
 ```
+# run tests in namespace
+clojure -M:test   -n xtest.api.case-test
+
 # create a user (first, no basic token passed)
 curl -i -X POST http://localhost:3100/users/create          -H "Content-Type: application/json"          -d '{
                "first-name": "Alice",
                "last-name" : "Smith3",
                "email"     : "alice.smith3@example.com",
-               "password"  : "Secur3P@ssword!"
+               "password"  : "Secur3P@ssword!"}'
 
 # fetch a user
  curl -G http://localhost:3100/users/get   \
  -H "Authorization: Basic YWxpY2Uuc21pdGgzQGV4YW1wbGUuY29tOlNlY3VyM1BAc3N3b3JkIQ=="   \
-        -H "Accept: application/json"          --data-urlencode "email=alice.smith3@example.com"
+        -H "Accept: application/json"          --data-urlencode "email=alice.smith3@example.com"}'
  
  # update password
  curl -i -X POST http://localhost:3100/users/update      \
@@ -106,7 +109,7 @@ curl -i -X POST http://localhost:3100/users/create          -H "Content-Type: ap
      -H "Content-Type: application/json"          -d '{
                "new-password": "abcdeABCDE01!",
                "email"     : "alice.smith3@example.com",
-               "original-password"  : "Secur3P@ssword!"
+               "original-password"  : "Secur3P@ssword!"}'
 
 
 # pass basic token of existing user
