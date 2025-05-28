@@ -148,7 +148,7 @@
    Steps and tags are stored as JSON. Returns the inserted case map."
   [case-data]
   (jdbc/execute! ds
-    ["INSERT INTO \"case\" (_id, name, project_id, description, steps, tags) VALUES (?, ?, ?, ?, ?, ?)"
+    ["INSERT INTO tcase (_id, name, project_id, description, steps, tags) VALUES (?, ?, ?, ?, ?, ?)"
      (:_id case-data)
      (:name case-data)
      (:project-id case-data)
@@ -162,7 +162,7 @@
   [id]
   (when-let [result (first
                      (jdbc/execute! ds
-                       ["SELECT _id, name, project_id, description, steps, tags FROM \"case\" WHERE _id = ?" id]
+                       ["SELECT _id, name, project_id, description, steps, tags FROM tcase WHERE _id = ?" id]
                        {:builder-fn rs/as-unqualified-kebab-maps}))]
     (-> result
         (update :steps #(when % (clojure.data.json/read-str % :key-fn keyword)))
@@ -173,7 +173,7 @@
   [name]
   (when-let [result (first
                      (jdbc/execute! ds
-                       ["SELECT _id, name, project_id, description, steps, tags FROM \"case\" WHERE name = ?" name]
+                       ["SELECT _id, name, project_id, description, steps, tags FROM tcase WHERE name = ?" name]
                        {:builder-fn rs/as-unqualified-kebab-maps}))]
     (-> result
         (update :steps #(when % (clojure.data.json/read-str % :key-fn keyword)))
@@ -183,7 +183,7 @@
   "Retrieves all cases. Returns a vector of maps with kebab-case keys."
   []
   (let [results (jdbc/execute! ds
-                  ["SELECT _id, name, project_id, description, steps, tags FROM \"case\" ORDER BY _id"]
+                  ["SELECT _id, name, project_id, description, steps, tags FROM tcase ORDER BY _id"]
                   {:builder-fn rs/as-unqualified-kebab-maps})]
     (map (fn [case-data]
            (-> case-data
@@ -198,7 +198,7 @@
     []
     (let [placeholders (clojure.string/join ", " (repeat (count ids) "?"))
           results (jdbc/execute! ds
-                    (into [(str "SELECT _id, name, project_id, description, steps, tags FROM \"case\" WHERE _id IN (" placeholders ") ORDER BY _id")] ids)
+                    (into [(str "SELECT _id, name, project_id, description, steps, tags FROM tcase WHERE _id IN (" placeholders ") ORDER BY _id")] ids)
                     {:builder-fn rs/as-unqualified-kebab-maps})]
       (map (fn [case-data]
              (-> case-data
@@ -213,7 +213,7 @@
     []
     (let [placeholders (clojure.string/join ", " (repeat (count names) "?"))
           results (jdbc/execute! ds
-                    (into [(str "SELECT _id, name, project_id, description, steps, tags FROM \"case\" WHERE name IN (" placeholders ") ORDER BY _id")] names)
+                    (into [(str "SELECT _id, name, project_id, description, steps, tags FROM tcase WHERE name IN (" placeholders ") ORDER BY _id")] names)
                     {:builder-fn rs/as-unqualified-kebab-maps})]
       (map (fn [case-data]
              (-> case-data
@@ -228,7 +228,7 @@
     []
     (let [placeholders (clojure.string/join ", " (repeat (count project-ids) "?"))
           results (jdbc/execute! ds
-                    (into [(str "SELECT _id, name, project_id, description, steps, tags FROM \"case\" WHERE project_id IN (" placeholders ") ORDER BY _id")] project-ids)
+                    (into [(str "SELECT _id, name, project_id, description, steps, tags FROM tcase WHERE project_id IN (" placeholders ") ORDER BY _id")] project-ids)
                     {:builder-fn rs/as-unqualified-kebab-maps})]
       (map (fn [case-data]
              (-> case-data
@@ -266,7 +266,7 @@
                        (str " WHERE " (clojure.string/join " AND " conditions))
                        "")
         
-        query (str "SELECT _id, name, project_id, description, steps, tags FROM \"case\"" where-clause " ORDER BY _id")
+        query (str "SELECT _id, name, project_id, description, steps, tags FROM tcase" where-clause " ORDER BY _id")
         
         results (jdbc/execute! ds
                   (into [query] params)
@@ -281,5 +281,5 @@
 (defn delete-case!
   "Deletes a case by _id. Returns the number of rows affected."
   [id]
-  (let [result (jdbc/execute! ds ["DELETE FROM \"case\" WHERE _id = ?" id])]
+  (let [result (jdbc/execute! ds ["DELETE FROM tcase WHERE _id = ?" id])]
     (first result)))

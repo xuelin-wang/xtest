@@ -329,7 +329,7 @@
                                     (reset! projects-data nil)
                                     (reset! cases-data nil)
                                     (reset! current-view :users-list)
-                                    (reset! login-message {:type :success :text (str "Found " (count (:body response)) " users")}))
+                                    (reset! login-message nil))
                                   (do
                                     (reset! users-data nil)
                                     (reset! login-message {:type :error :text (str "Error: " (get-in response [:body :error]))}))))
@@ -348,7 +348,7 @@
                                     (reset! users-data nil)
                                     (reset! cases-data nil)
                                     (reset! current-view :projects-list)
-                                    (reset! login-message {:type :success :text (str "Found " (count (:body response)) " projects")}))
+                                    (reset! login-message nil))
                                   (do
                                     (reset! projects-data nil)
                                     (reset! login-message {:type :error :text (str "Error: " (get-in response [:body :error]))}))))
@@ -832,21 +832,30 @@
                                   (let [result (call-login-api email password)]
                                     (if (:success result)
                                       (do
-                                        (reset! auth-state {:logged-in? true 
-                                                           :user (:user result)
-                                                           :credentials (encode-basic-auth email password)})
-                                        ;; Automatically load projects list after successful login
-                                        (let [projects-response (authenticated-request :get "http://localhost:3100/projects/get")]
-                                          (if (= 200 (:status projects-response))
-                                            (do
-                                              (reset! projects-data (:body projects-response))
-                                              (reset! users-data nil)
-                                              (reset! cases-data nil)
-                                              (reset! current-view :projects-list)
-                                              (reset! login-message {:type :success :text (str "Welcome! Found " (count (:body projects-response)) " projects")}))
-                                            (do
-                                              (reset! projects-data nil)
-                                              (reset! login-message {:type :success :text (:message result)})))))
+                                        (let [credentials (encode-basic-auth email password)]
+                                          (reset! auth-state {:logged-in? true 
+                                                             :user (:user result)
+                                                             :credentials credentials})
+                                          ;; Automatically load projects list after successful login
+                                          (let [projects-response (try
+                                                                    (http/request {:method :get
+                                                                                   :url "http://localhost:3100/projects/get"
+                                                                                   :headers {"Content-Type" "application/json"
+                                                                                            "Authorization" credentials}
+                                                                                   :as :json
+                                                                                   :throw-exceptions false})
+                                                                    (catch Exception e
+                                                                      {:status 500 :body {:error (str "Request failed: " (.getMessage e))}}))]
+                                            (if (= 200 (:status projects-response))
+                                              (do
+                                                (reset! projects-data (:body projects-response))
+                                                (reset! users-data nil)
+                                                (reset! cases-data nil)
+                                                (reset! current-view :projects-list)
+                                                (reset! login-message {:type :success :text "Welcome!"}))
+                                              (do
+                                                (reset! projects-data nil)
+                                                (reset! login-message {:type :success :text (:message result)}))))))
                                       (reset! login-message {:type :error :text (:error result)}))))
                                 (weave/push-html! (login-view))))}
            [:div
