@@ -176,7 +176,8 @@
       current-view (atom :dashboard)
       add-user-form (atom {:email "" :first-name "" :last-name "" :password "" :message nil})
       add-project-form (atom {:name "" :_id "" :message nil})
-      delete-confirmation (atom nil)]
+      delete-confirmation (atom nil)
+      all-cases-by-projects (atom nil)]
 
   (defn- encode-basic-auth [email password]
     "Encode email and password for HTTP Basic Auth"
@@ -244,6 +245,68 @@
     (authenticated-request :get "http://localhost:3100/cases/get" 
                           :query-params {"project-ids" project-id}))
 
+  (defn- delete-case-by-id [case-id]
+    "Delete a case by ID using the API"
+    (authenticated-request :post "http://localhost:3100/cases/delete" 
+                          :body {:id case-id}))
+
+  (defn- get-all-cases []
+    "Get all cases using the API"
+    (authenticated-request :get "http://localhost:3100/cases/get"))
+
+  (defn- get-all-cases-by-projects []
+    "Get all cases and projects, then organize cases by project"
+    (let [projects-response (authenticated-request :get "http://localhost:3100/projects/get")
+          cases-response (authenticated-request :get "http://localhost:3100/cases/get")]
+      (if (and (= 200 (:status projects-response)) (= 200 (:status cases-response)))
+        {:success true
+         :projects (:body projects-response)
+         :cases (:body cases-response)}
+        {:success false
+         :error "Failed to fetch projects or cases"})))
+
+  (defn- extract-folder-from-tags [tags]
+    "Extract folder path from tags with 'folder:' prefix, return '/' if not found"
+    (if tags
+      (let [folder-tag (first (filter #(and % (.startsWith % "folder:")) tags))]
+        (if folder-tag
+          (subs folder-tag 7) ; Remove "folder:" prefix (7 characters)
+          "/"))
+      "/"))
+
+  (defn- filter-non-folder-tags [tags]
+    "Filter out tags that start with 'folder:' prefix"
+    (if tags
+      (filter #(and % (not (.startsWith % "folder:"))) tags)
+      []))
+
+  (defn- normalize-folder-path [folder]
+    "Normalize folder path to always start with '/'"
+    (if (and folder (not= folder "/"))
+      (if (.startsWith folder "/")
+        folder
+        (str "/" folder))
+      "/"))
+
+  (defn- folder-sort-key [folder]
+    "Generate sort key for folder path based on hierarchical rules"
+    (let [normalized (normalize-folder-path folder)
+          parts (if (= normalized "/") 
+                  [""] 
+                  (vec (remove empty? (clojure.string/split normalized #"/"))))]
+      ;; Create a sort key where "/" comes first, then sorted by parts
+      ;; Each level: empty string (no subfolder) comes before actual folder names
+      (vec (concat 
+             (if (= normalized "/") [0] [1]) ; "/" gets priority 0, others get 1
+             (mapcat (fn [part] [part ""]) parts))))) ; Add empty string after each part for sub-level sorting
+
+  (defn- sort-cases-by-folder [cases]
+    "Sort cases by folder value according to hierarchical rules"
+    (sort-by 
+      (fn [case-item] 
+        (folder-sort-key (extract-folder-from-tags (:tags case-item))))
+      cases))
+
   (defn login-view []
     [::c/view#app
      [:div.flex.justify-start.items-start.min-h-screen.pt-8.pl-8
@@ -253,16 +316,19 @@
          [:div.text-center
           [:h2.text-2xl.font-bold.mb-4.text-green-600 "Login Successful!"]
           [:p.mb-4 (str "Welcome, " (get-in @auth-state [:user :first-name]) "!")]
-          [:div.space-y-4
-           [::c/button
-            {:size :lg
-             :variant :primary
+          [:div.flex.space-x-1.mb-6.border-b.border-gray-200
+           [:button
+            {:class (str "px-4 py-2 font-medium text-sm border-b-2 " 
+                        (if (= @current-view :users-list) 
+                          "border-red-500 text-red-600" 
+                          "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"))
              :data-on-click (weave/handler
                               (let [response (authenticated-request :get "http://localhost:3100/users/get")]
                                 (if (= 200 (:status response))
                                   (do
                                     (reset! users-data (:body response))
                                     (reset! projects-data nil)
+                                    (reset! cases-data nil)
                                     (reset! current-view :users-list)
                                     (reset! login-message {:type :success :text (str "Found " (count (:body response)) " users")}))
                                   (do
@@ -270,15 +336,18 @@
                                     (reset! login-message {:type :error :text (str "Error: " (get-in response [:body :error]))}))))
                               (weave/push-html! (login-view)))}
             "Users"]
-           [::c/button
-            {:size :lg
-             :variant :primary
+           [:button
+            {:class (str "px-4 py-2 font-medium text-sm border-b-2 " 
+                        (if (= @current-view :projects-list) 
+                          "border-red-500 text-red-600" 
+                          "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"))
              :data-on-click (weave/handler
                               (let [response (authenticated-request :get "http://localhost:3100/projects/get")]
                                 (if (= 200 (:status response))
                                   (do
                                     (reset! projects-data (:body response))
                                     (reset! users-data nil)
+                                    (reset! cases-data nil)
                                     (reset! current-view :projects-list)
                                     (reset! login-message {:type :success :text (str "Found " (count (:body response)) " projects")}))
                                   (do
@@ -286,19 +355,44 @@
                                     (reset! login-message {:type :error :text (str "Error: " (get-in response [:body :error]))}))))
                               (weave/push-html! (login-view)))}
             "Projects"]
-           [::c/button
-            {:size :lg
-             :variant :secondary
+           [:button
+            {:class (str "px-4 py-2 font-medium text-sm border-b-2 " 
+                        (if (= @current-view :cases-list) 
+                          "border-red-500 text-red-600" 
+                          "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"))
              :data-on-click (weave/handler
-                              (reset! auth-state {:logged-in? false :user nil :credentials nil})
-                              (reset! login-message nil)
                               (reset! users-data nil)
                               (reset! projects-data nil)
-                              (reset! cases-data nil)
-                              (reset! selected-project-id nil)
-                              (reset! current-view :dashboard)
+                              (reset! current-view :cases-list)
+                              ;; If already showing cases for a specific project, keep them
+                              (when (not @selected-project-id)
+                                ;; Otherwise, fetch all cases grouped by projects
+                                (let [response (get-all-cases-by-projects)]
+                                  (if (:success response)
+                                    (do
+                                      (reset! all-cases-by-projects response)
+                                      (reset! cases-data nil)
+                                      (reset! selected-project-id nil)
+                                      (reset! login-message {:type :success :text (str "Loaded cases for " (count (:projects response)) " projects")}))
+                                    (do
+                                      (reset! all-cases-by-projects nil)
+                                      (reset! login-message {:type :error :text (str "Error fetching cases: " (:error response))})))))
                               (weave/push-html! (login-view)))}
-            "Logout"]]
+            "Cases"]
+           [:div.ml-auto
+            [::c/button
+             {:size :md
+              :variant :secondary
+              :data-on-click (weave/handler
+                               (reset! auth-state {:logged-in? false :user nil :credentials nil})
+                               (reset! login-message nil)
+                               (reset! users-data nil)
+                               (reset! projects-data nil)
+                               (reset! cases-data nil)
+                               (reset! selected-project-id nil)
+                               (reset! current-view :dashboard)
+                               (weave/push-html! (login-view)))}
+             "Logout"]]]
           (when @login-message
             [::c/alert.mt-4 {:type (:type @login-message)}
              (:text @login-message)])
@@ -344,16 +438,7 @@
                                          (weave/push-html! (login-view)))}
                        "Delete"]]])
                   @users-data)]]]
-             [:div.mt-4.space-x-2
-              [::c/button
-               {:size :md
-                :variant :secondary
-                :data-on-click (weave/handler
-                                 (reset! users-data nil)
-                                 (reset! login-message nil)
-                                 (reset! current-view :dashboard)
-                                 (weave/push-html! (login-view)))}
-               "Clear Table"]]])
+])
 
           ;; Delete Confirmation Dialog
           (when @delete-confirmation
@@ -364,12 +449,16 @@
                 [:svg.h-6.w-6.text-red-600 {:fill "none" :viewBox "0 0 24 24" :stroke "currentColor"}
                  [:path {:stroke-linecap "round" :stroke-linejoin "round" :stroke-width "2" :d "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.962-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"}]]]
                [:h3.text-lg.leading-6.font-medium.text-gray-900.mt-4 
-                (if (= (:type @delete-confirmation) :user) "Delete User" "Delete Project")]
+                (condp = (:type @delete-confirmation)
+                  :user "Delete User"
+                  :project "Delete Project" 
+                  :case "Delete Case")]
                [:div.mt-2.px-7.py-3
                 [:p.text-sm.text-gray-500
-                 (if (= (:type @delete-confirmation) :user)
-                   (str "Are you sure you want to delete user " (:user-email @delete-confirmation) "? This action cannot be undone.")
-                   (str "Are you sure you want to delete project " (:project-name @delete-confirmation) "? This action cannot be undone."))]]
+                 (condp = (:type @delete-confirmation)
+                   :user (str "Are you sure you want to delete user " (:user-email @delete-confirmation) "? This action cannot be undone.")
+                   :project (str "Are you sure you want to delete project " (:project-name @delete-confirmation) "? This action cannot be undone.")
+                   :case (str "Are you sure you want to delete case " (:case-name @delete-confirmation) "? This action cannot be undone."))]]
                [:div.items-center.px-4.py-3.space-x-4.flex.justify-center
                 [::c/button
                  {:size :md
@@ -382,7 +471,8 @@
                  {:size :md
                   :variant :danger
                   :data-on-click (weave/handler
-                                   (if (= (:type @delete-confirmation) :user)
+                                   (condp = (:type @delete-confirmation)
+                                     :user 
                                      ;; Delete user
                                      (let [response (delete-user-by-id (:user-id @delete-confirmation))]
                                        (if (= 200 (:status response))
@@ -394,6 +484,8 @@
                                                (reset! users-data (:body refresh-response))
                                                (reset! login-message {:type :error :text "Error refreshing users list"}))))
                                          (reset! login-message {:type :error :text (str "Error deleting user: " (get-in response [:body :error]))})))
+                                     
+                                     :project
                                      ;; Delete project
                                      (let [response (delete-project-by-id (:project-id @delete-confirmation))]
                                        (if (= 200 (:status response))
@@ -404,7 +496,27 @@
                                              (if (= 200 (:status refresh-response))
                                                (reset! projects-data (:body refresh-response))
                                                (reset! login-message {:type :error :text "Error refreshing projects list"}))))
-                                         (reset! login-message {:type :error :text (str "Error deleting project: " (get-in response [:body :error]))}))))
+                                         (reset! login-message {:type :error :text (str "Error deleting project: " (get-in response [:body :error]))})))
+                                     
+                                     :case
+                                     ;; Delete case
+                                     (let [response (delete-case-by-id (:case-id @delete-confirmation))]
+                                       (if (= 200 (:status response))
+                                         (do
+                                           (reset! login-message {:type :success :text "Case deleted successfully"})
+                                           ;; Refresh the current cases view
+                                           (if @selected-project-id
+                                             ;; Refresh project-specific cases
+                                             (let [refresh-response (get-cases-by-project-id @selected-project-id)]
+                                               (if (= 200 (:status refresh-response))
+                                                 (reset! cases-data (:body refresh-response))
+                                                 (reset! login-message {:type :error :text "Error refreshing cases list"})))
+                                             ;; Refresh all cases grouped by projects
+                                             (let [refresh-response (get-all-cases-by-projects)]
+                                               (if (:success refresh-response)
+                                                 (reset! all-cases-by-projects refresh-response)
+                                                 (reset! login-message {:type :error :text "Error refreshing cases list"})))))
+                                         (reset! login-message {:type :error :text (str "Error deleting case: " (get-in response [:body :error]))}))))
                                    (reset! delete-confirmation nil)
                                    (weave/push-html! (login-view)))}
                  "Yes, Delete"]]]]])
@@ -531,16 +643,7 @@
                                           (weave/push-html! (login-view)))}
                         "Delete"]]]])
                   @projects-data)]]]
-             [:div.mt-4.space-x-2
-              [::c/button
-               {:size :md
-                :variant :secondary
-                :data-on-click (weave/handler
-                                 (reset! projects-data nil)
-                                 (reset! login-message nil)
-                                 (reset! current-view :dashboard)
-                                 (weave/push-html! (login-view)))}
-               "Clear Table"]]])
+])
 
           ;; Add Project Form
           (when (= @current-view :add-project)
@@ -619,11 +722,13 @@
                  [:th.px-4.py-2.text-left.text-xs.font-medium.text-gray-500.uppercase.tracking-wider.border-b "Case ID"]
                  [:th.px-4.py-2.text-left.text-xs.font-medium.text-gray-500.uppercase.tracking-wider.border-b "Name"]
                  [:th.px-4.py-2.text-left.text-xs.font-medium.text-gray-500.uppercase.tracking-wider.border-b "Description"]
-                 [:th.px-4.py-2.text-left.text-xs.font-medium.text-gray-500.uppercase.tracking-wider.border-b "Tags"]]]
+                 [:th.px-4.py-2.text-left.text-xs.font-medium.text-gray-500.uppercase.tracking-wider.border-b "Folder"]
+                 [:th.px-4.py-2.text-left.text-xs.font-medium.text-gray-500.uppercase.tracking-wider.border-b "Tags"]
+                 [:th.px-4.py-2.text-left.text-xs.font-medium.text-gray-500.uppercase.tracking-wider.border-b "Actions"]]]
                [:tbody.bg-white.divide-y.divide-gray-200
                 (if (empty? @cases-data)
                   [:tr
-                   [:td.px-4.py-8.text-center.text-gray-500.border-b {:colspan 4}
+                   [:td.px-4.py-8.text-center.text-gray-500.border-b {:colspan 6}
                     "No cases found for this project"]]
                   (map-indexed
                     (fn [idx case-item]
@@ -633,21 +738,84 @@
                        [:td.px-4.py-2.text-sm.text-gray-900.border-b (if (> (count (:description case-item)) 100)
                                                                          (str (subs (:description case-item) 0 100) "...")
                                                                          (:description case-item))]
-                       [:td.px-4.py-2.text-sm.text-gray-900.border-b (if (:tags case-item)
-                                                                         (clojure.string/join ", " (:tags case-item))
-                                                                         "")]])
-                    @cases-data))]]
-             [:div.mt-4
-              [::c/button
-               {:size :md
-                :variant :secondary
-                :data-on-click (weave/handler
-                                 (reset! cases-data nil)
-                                 (reset! selected-project-id nil)
-                                 (reset! login-message nil)
-                                 (reset! current-view :dashboard)
-                                 (weave/push-html! (login-view)))}
-               "Clear Cases"]]]])
+                       [:td.px-4.py-2.text-sm.text-gray-900.border-b (extract-folder-from-tags (:tags case-item))]
+                       [:td.px-4.py-2.text-sm.text-gray-900.border-b (let [filtered-tags (filter-non-folder-tags (:tags case-item))]
+                                                                         (if (seq filtered-tags)
+                                                                           (clojure.string/join ", " filtered-tags)
+                                                                           ""))]
+                       [:td.px-4.py-2.text-sm.border-b
+                        [::c/button
+                         {:size :sm
+                          :variant :danger
+                          :data-on-click (weave/handler
+                                           (reset! delete-confirmation {:type :case 
+                                                                        :case-id (:id case-item)
+                                                                        :case-name (:name case-item)})
+                                           (weave/push-html! (login-view)))}
+                         "Delete"]]])
+                    (sort-cases-by-folder @cases-data)))]]
+]])
+
+          ;; Standalone Cases view (cases grouped by project)
+          (when (and (= @current-view :cases-list) (not @selected-project-id))
+            [:div.mt-6.w-full
+             [:div.flex.justify-between.items-center.mb-4
+              [:h3.text-lg.font-semibold "Cases by Project"]
+              [:p.text-sm.text-gray-500 "All projects and their cases"]]
+             (if @all-cases-by-projects
+               [:div.space-y-6
+                (let [projects (:projects @all-cases-by-projects)
+                      all-cases (:cases @all-cases-by-projects)]
+                  (map-indexed
+                    (fn [project-idx project]
+                      (let [project-cases (sort-cases-by-folder (filter #(= (:project-id %) (:id project)) all-cases))]
+                        [:div {:key project-idx :class "border border-gray-200 rounded-lg p-4 bg-white"}
+                         [:div.flex.justify-between.items-center.mb-3
+                          [:h4.text-md.font-semibold.text-gray-800 (str "Project: " (:name project))]
+                          [:span.text-sm.text-gray-500 (str "(" (count project-cases) " cases)")]]
+                         (if (empty? project-cases)
+                           [:div.text-center.text-gray-500.py-4
+                            [:p "No cases found for this project"]]
+                           [:div.overflow-x-auto
+                            [:table.min-w-full.bg-white.border.border-gray-300.rounded-lg
+                             [:thead.bg-gray-50
+                              [:tr
+                               [:th.px-3.py-2.text-left.text-xs.font-medium.text-gray-500.uppercase.tracking-wider.border-b "Case ID"]
+                               [:th.px-3.py-2.text-left.text-xs.font-medium.text-gray-500.uppercase.tracking-wider.border-b "Name"]
+                               [:th.px-3.py-2.text-left.text-xs.font-medium.text-gray-500.uppercase.tracking-wider.border-b "Description"]
+                               [:th.px-3.py-2.text-left.text-xs.font-medium.text-gray-500.uppercase.tracking-wider.border-b "Folder"]
+                               [:th.px-3.py-2.text-left.text-xs.font-medium.text-gray-500.uppercase.tracking-wider.border-b "Tags"]
+                               [:th.px-3.py-2.text-left.text-xs.font-medium.text-gray-500.uppercase.tracking-wider.border-b "Actions"]]]
+                             [:tbody.bg-white.divide-y.divide-gray-200
+                              (map-indexed
+                                (fn [case-idx case-item]
+                                  [:tr {:key case-idx :class (if (even? case-idx) "bg-gray-50" "bg-white")}
+                                   [:td.px-3.py-2.text-sm.text-gray-900.border-b (:id case-item)]
+                                   [:td.px-3.py-2.text-sm.text-gray-900.border-b (:name case-item)]
+                                   [:td.px-3.py-2.text-sm.text-gray-900.border-b (if (> (count (:description case-item)) 80)
+                                                                                     (str (subs (:description case-item) 0 80) "...")
+                                                                                     (:description case-item))]
+                                   [:td.px-3.py-2.text-sm.text-gray-900.border-b (extract-folder-from-tags (:tags case-item))]
+                                   [:td.px-3.py-2.text-sm.text-gray-900.border-b (let [filtered-tags (filter-non-folder-tags (:tags case-item))]
+                                                                                     (if (seq filtered-tags)
+                                                                                       (clojure.string/join ", " filtered-tags)
+                                                                                       ""))]
+                                   [:td.px-3.py-2.text-sm.border-b
+                                    [::c/button
+                                     {:size :sm
+                                      :variant :danger
+                                      :data-on-click (weave/handler
+                                                       (reset! delete-confirmation {:type :case 
+                                                                                    :case-id (:id case-item)
+                                                                                    :case-name (:name case-item)})
+                                                       (weave/push-html! (login-view)))}
+                                     "Delete"]]])
+                                project-cases)]]])]))
+                    projects))
+]
+               [:div.p-8.text-center.text-gray-500.bg-gray-50.rounded-lg
+                [:p.text-lg "Loading cases..."]
+                [:p.text-sm.mt-2 "Please wait while we fetch cases from all projects"]])])
           ]
          
          ;; Login form when not logged in  
