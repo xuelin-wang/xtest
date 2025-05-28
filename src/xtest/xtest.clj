@@ -324,7 +324,7 @@
           [:div.flex.space-x-1.mb-6.border-b.border-gray-200
            [:button
             {:class (str "px-4 py-2 font-medium text-sm border-b-2 "
-                        (if (= @current-view :projects-list)
+                        (if (or (= @current-view :projects-list) (= @current-view :add-project))
                           "border-red-500 text-red-600"
                           "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"))
              :data-on-click (weave/handler
@@ -343,7 +343,7 @@
             "Projects"]
            [:button
             {:class (str "px-4 py-2 font-medium text-sm border-b-2 "
-                        (if (= @current-view :cases-list)
+                        (if (or (= @current-view :cases-list) (= @current-view :add-case))
                           "border-red-500 text-red-600"
                           "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"))
              :data-on-click (weave/handler
@@ -367,7 +367,7 @@
             "Cases"]
            [:button
             {:class (str "px-4 py-2 font-medium text-sm border-b-2 "
-                        (if (= @current-view :users-list)
+                        (if (or (= @current-view :users-list) (= @current-view :add-user))
                           "border-red-500 text-red-600"
                           "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"))
              :data-on-click (weave/handler
