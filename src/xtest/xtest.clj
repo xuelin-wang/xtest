@@ -372,7 +372,7 @@
                                       (reset! all-cases-by-projects response)
                                       (reset! cases-data nil)
                                       (reset! selected-project-id nil)
-                                      (reset! login-message {:type :success :text (str "Loaded cases for " (count (:projects response)) " projects")}))
+                                      (reset! login-message nil))
                                     (do
                                       (reset! all-cases-by-projects nil)
                                       (reset! login-message {:type :error :text (str "Error fetching cases: " (:error response))})))))
@@ -628,7 +628,7 @@
                                                 (reset! cases-data (:body response))
                                                 (reset! selected-project-id (:id project))
                                                 (reset! current-view :cases-list)
-                                                (reset! login-message {:type :success :text (str "Found " (count (:body response)) " cases for project " (:id project))}))
+                                                (reset! login-message nil))
                                               (reset! login-message {:type :error :text (str "Error fetching cases: " (get-in response [:body :error]))})))
                                           (weave/push-html! (login-view)))}
                         "Cases"]
