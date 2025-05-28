@@ -314,7 +314,6 @@
        (if (:logged-in? @auth-state)
          ;; Dashboard view when logged in
          [:div.text-center
-          [:h2.text-2xl.font-bold.mb-4.text-green-600 "Login Successful!"]
           [:p.mb-4 (str "Welcome, " (get-in @auth-state [:user :first-name]) "!")]
           [:div.flex.space-x-1.mb-6.border-b.border-gray-200
            [:button
@@ -836,7 +835,18 @@
                                         (reset! auth-state {:logged-in? true 
                                                            :user (:user result)
                                                            :credentials (encode-basic-auth email password)})
-                                        (reset! login-message {:type :success :text (:message result)}))
+                                        ;; Automatically load projects list after successful login
+                                        (let [projects-response (authenticated-request :get "http://localhost:3100/projects/get")]
+                                          (if (= 200 (:status projects-response))
+                                            (do
+                                              (reset! projects-data (:body projects-response))
+                                              (reset! users-data nil)
+                                              (reset! cases-data nil)
+                                              (reset! current-view :projects-list)
+                                              (reset! login-message {:type :success :text (str "Welcome! Found " (count (:body projects-response)) " projects")}))
+                                            (do
+                                              (reset! projects-data nil)
+                                              (reset! login-message {:type :success :text (:message result)})))))
                                       (reset! login-message {:type :error :text (:error result)}))))
                                 (weave/push-html! (login-view))))}
            [:div
