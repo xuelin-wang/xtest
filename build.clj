@@ -4,7 +4,7 @@
 
 (def lib 'net.clojars.xtest/xtest)
 (def version "0.1.0-SNAPSHOT")
-(def main 'xtest.xtest)
+(def main 'xtest.server)
 (def class-dir "target/classes")
 
 (defn test "Run all the tests." [opts]

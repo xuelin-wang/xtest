@@ -1,10 +1,11 @@
-{:paths ["src" "resources"]
+{:paths ["src/clj" "resources"]
  :deps {org.clojure/clojure {:mvn/version "1.12.0"}
-        weave/core {:git/url "https://github.com/nakkaya/weave/"
-                     :git/sha "22fb518363fcf5390c42cbdd711ee8232e7c8315"}
-        ring/ring-jetty-adapter {:mvn/version "1.14.1"}
-        metosin/reitit {:mvn/version "0.9.0"}
-        ring/ring-json {:mvn/version "0.5.1"}
+
+        io.pedestal/pedestal.service  {:mvn/version "0.6.3"}
+        io.pedestal/pedestal.jetty {:mvn/version "0.6.3"}
+        metosin/reitit-pedestal {:mvn/version "0.9.1"}
+        metosin/reitit {:mvn/version "0.9.1"}
+
         com.xtdb/xtdb-api {:mvn/version "2.0.0-beta8.1"}
         com.github.seancorfield/next.jdbc {:mvn/version "1.3.1002"}
         ;; https://mvnrepository.com/artifact/org.clojure/data.json
@@ -15,10 +16,17 @@
         cheshire/cheshire {:mvn/version "6.0.0"}
         
         com.password4j/password4j {:mvn/version "1.8.2"}
+        
+       org.clojure/clojurescript {:mvn/version "1.12.42"}
+        
+        thheller/shadow-cljs {:mvn/version "3.1.5"}
+        
+        lilactown/helix {:mvn/version "0.2.1"}
+        
         }
  :aliases
  {:run-m {:main-opts ["-m" "xtest.xtest"]}
-  :run-x {:ns-default xtest.xtest
+  :run-x {:ns-default xtest.server
           :exec-fn start
           }
 
