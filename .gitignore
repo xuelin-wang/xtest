@@ -23,6 +23,7 @@
 *.class
 *.jar
 *.swp
+.shadow-cljs
 *~
 /checkouts
 /classes
