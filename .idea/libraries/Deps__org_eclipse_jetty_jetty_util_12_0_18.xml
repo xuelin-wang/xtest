@@ -1,9 +1,0 @@
-<component name="libraryTable">
-  <library name="Deps: org.eclipse.jetty/jetty-util:12.0.18">
-    <CLASSES>
-      <root url="jar://$MAVEN_REPOSITORY$/org/eclipse/jetty/jetty-util/12.0.18/jetty-util-12.0.18.jar!/" />
-    </CLASSES>
-    <JAVADOC />
-    <SOURCES />
-  </library>
-</component>

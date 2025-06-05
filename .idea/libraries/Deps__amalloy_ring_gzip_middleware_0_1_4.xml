@@ -1,9 +1,0 @@
-<component name="libraryTable">
-  <library name="Deps: amalloy/ring-gzip-middleware:0.1.4">
-    <CLASSES>
-      <root url="jar://$MAVEN_REPOSITORY$/amalloy/ring-gzip-middleware/0.1.4/ring-gzip-middleware-0.1.4.jar!/" />
-    </CLASSES>
-    <JAVADOC />
-    <SOURCES />
-  </library>
-</component>

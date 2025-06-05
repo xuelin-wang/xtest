@@ -23,20 +23,20 @@
        (every? string? tags)))
 
 (defn create-case
-  "Creates a new case with provided _id, name, project-id, description, steps, and tags.
+  "Creates a new case with provided id, name, project-id, description, steps, and tags.
    Expects a Ring request map with JSON body parsed as keywords.
    Returns a Ring response map with status 201 and created case in the body,
    or status 400 with an error message if validation fails."
   [{:keys [body]}]
-  (let [{:keys [_id name project-id description steps tags]} body]
+  (let [{:keys [id name project-id description steps tags]} body]
     (cond
-      (str/blank? _id)
+      (str/blank? id)
       {:status 400
-       :body {:error "Case _id is required"}}
+       :body {:error "Case id is required"}}
       
-      (not (re-matches #"case-\d+" _id))
+      (not (re-matches #"case-\d+" id))
       {:status 400
-       :body {:error "Case _id must be in format 'case-<num>' where <num> is an integer"}}
+       :body {:error "Case id must be in format 'case-<num>' where <num> is an integer"}}
       
       (str/blank? name)
       {:status 400
@@ -58,9 +58,9 @@
       {:status 400
        :body {:error "Tags must be a vector of strings"}}
       
-      (db/get-case-by-id _id)
+      (db/get-case-by-id id)
       {:status 400
-       :body {:error (format "Case with _id '%s' already exists" _id)}}
+       :body {:error (format "Case with id '%s' already exists" id)}}
       
       (db/get-case-by-name name)
       {:status 400
@@ -68,10 +68,10 @@
       
       (not (db/get-project-by-id project-id))
       {:status 400
-       :body {:error (format "Project with _id '%s' does not exist" project-id)}}
+       :body {:error (format "Project with id '%s' does not exist" project-id)}}
       
       :else
-      (let [case-data {:_id _id 
+      (let [case-data {:_id id 
                        :name name 
                        :project-id project-id 
                        :description description 
@@ -108,23 +108,24 @@
          :body cases}))))
 
 (defn delete-case
-  "Deletes a case by _id via JSON body.
-   Expects a Ring request map with JSON body containing :_id.
+  "Deletes a case by id via JSON body.
+   Expects a requiest query parameter: id.
    Returns a Ring response map with status 200 if deleted successfully,
    or status 404 if the case is not found."
-  [{:keys [body]}]
-  (let [{:keys [_id]} body]
+  [{:keys [params]}]
+  (let [{:keys [id]} params]
     (cond
-      (str/blank? _id)
+      (str/blank? id)
       {:status 400
-       :body {:error "Case _id is required"}}
+       :body {:error "Case id is required"}}
       
-      (not (db/get-case-by-id _id))
+      (not (db/get-case-by-id id))
       {:status 404
-       :body {:error (format "No case found with _id %s" _id)}}
+       :body {:error (format "No case found with id %s" id)}}
       
       :else
-      (let [result (db/delete-case! _id)]
+      (let [result (db/delete-case! id)]
         {:status 200
-         :body {:message (format "Case with _id %s deleted successfully" _id)
-                :rows-affected (:next.jdbc/update-count result)}}))))
+         :body {:message (format "Case with id %s deleted successfully" id)
+                ;:rows-affected (:next.jdbc/update-count result)
+                }}))))

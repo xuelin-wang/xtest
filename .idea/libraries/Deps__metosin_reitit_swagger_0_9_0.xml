@@ -1,9 +1,0 @@
-<component name="libraryTable">
-  <library name="Deps: metosin/reitit-swagger:0.9.0">
-    <CLASSES>
-      <root url="jar://$MAVEN_REPOSITORY$/metosin/reitit-swagger/0.9.0/reitit-swagger-0.9.0.jar!/" />
-    </CLASSES>
-    <JAVADOC />
-    <SOURCES />
-  </library>
-</component>

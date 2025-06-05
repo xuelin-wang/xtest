@@ -1,9 +1,0 @@
-<component name="libraryTable">
-  <library name="Deps: metosin/reitit-core:0.9.0">
-    <CLASSES>
-      <root url="jar://$MAVEN_REPOSITORY$/metosin/reitit-core/0.9.0/reitit-core-0.9.0.jar!/" />
-    </CLASSES>
-    <JAVADOC />
-    <SOURCES />
-  </library>
-</component>

@@ -14,4 +14,4 @@
         ;;:build-hooks [(debug/find-it)]
         :output-dir "resources/public/js"
         :asset-path "/js"
-        :modules {:main {:init-fn helix.app/init}}}}}
+        :modules {:main {:init-fn xtest.app/init}}}}}

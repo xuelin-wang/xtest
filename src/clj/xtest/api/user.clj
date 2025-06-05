@@ -21,8 +21,8 @@
    Expects a Ring request map with JSON body parsed as keywords.
    Returns a Ring response map with status 201 and created user in the body,
    or status 400 with an error message if the password does not meet complexity requirements."
-   [{:keys [body]}]
-   (let [{:keys [first-name last-name email password]} body]
+   [{:keys [body-params]}]
+   (let [{:keys [first-name last-name email password]} body-params]
      (if-not (valid-password? password)
        {:status 400
         :body {:error "Password must be at least 10 characters long, have at least one lowercase ASCII letter, one uppercase ASCII letter, one digit, and one special symbol (e.g. ! @ # $ % ^ & * ( ) - _ = + [ ] { } | / \\ < > , . : ; \" ')."}}
@@ -44,8 +44,8 @@
   If 'emails' parameter is provided as comma-separated list, returns users with those emails.
   If no 'emails' parameter is provided, returns all users.
   Returns 200 with the user maps or empty list if none found."
-  [{:keys [query-params]}]
-  (let [emails-param (get query-params "emails")
+  [{:keys [params] :as request}]
+  (let [emails-param (:emails params)
         emails (when emails-param (clojure.string/split emails-param #","))]
     (if emails
       (let [users (db/get-users-by-emails emails)]
@@ -62,8 +62,8 @@
   or status 400 with an error message if the new password does not meet complexity requirements,
   or status 401 if the original password is incorrect,
   or status 404 if the user is not found."
-  [{:keys [body]}]
-  (let [{:keys [email original-password new-password]} body]
+  [{:keys [body-params]}]
+  (let [{:keys [email original-password new-password]} body-params]
     (if-let [user (db/get-user-by-email email)]
       (if (-> (Password/check original-password (:password user))
               .withArgon2)
@@ -87,12 +87,13 @@
    Expects a Ring request map with JSON body containing :id.
    Returns a Ring response map with status 200 if deleted successfully,
    or status 404 if the user is not found."
-  [{:keys [body]}]
-  (let [{:keys [id]} body]
+  [{:keys [params]}]
+  (let [{:keys [id]} params]
+    
     (cond
       (clojure.string/blank? id)
       {:status 400
-       :body {:error "User id is required"}}
+       :body {:error "id is required"}}
       
       (not (db/get-user id))
       {:status 404
@@ -102,14 +103,15 @@
       (let [result (db/delete-user! id)]
         {:status 200
          :body {:message (format "User with id %s deleted successfully" id)
-                :rows-affected (:next.jdbc/update-count result)}}))))
+                }}))
+    ))
 
 (defn login
   "Validates user credentials via JSON body with email and password.
    Returns 200 with success message if credentials are valid,
    or 400/401 with error message if invalid."
-  [{:keys [body]}]
-  (let [{:keys [email password]} body]
+  [{:keys [body-params]}]
+  (let [{:keys [email password]} body-params]
     (cond
       (clojure.string/blank? email)
       {:status 400

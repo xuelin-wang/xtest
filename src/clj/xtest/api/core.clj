@@ -69,7 +69,45 @@
 (def app
   (ring/ring-handler
     (ring/router
-      [["/users/create" {:post user/create-user
+      [
+       ["/index.html" {:get {:handler (fn [_]
+                                        (let [resource (clojure.java.io/resource "public/index.html")]
+                                          (if resource
+                                            {:status 200
+                                             :headers {"Content-Type" "text/html"
+                                                       "Content-Security-Policy" "default-src 'self' 'unsafe-inline' 'unsafe-eval'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: http:"}
+                                             :body (slurp resource)}
+                                            {:status 404 :body "Not found"})))}}]
+
+       ["/helixDemo.html" {:get {:handler (fn [_]
+                                            (let [resource (clojure.java.io/resource "public/helixDemo.html")]
+                                              (if resource
+                                                {:status 200
+                                                 :headers {"Content-Type" "text/html"
+                                                           "Content-Security-Policy" "default-src 'self' 'unsafe-inline' 'unsafe-eval'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: http:"}
+                                                 :body (slurp resource)}
+                                                {:status 404 :body "Not found"})))}}]
+
+       ["/main.css" {:get {:handler (fn [_]
+                                      (let [resource (clojure.java.io/resource "public/main.css")]
+                                        (if resource
+                                          {:status 200
+                                           :headers {"Content-Type" "text/css"}
+                                           :body (slurp resource)}
+                                          {:status 404 :body "Not found"})))}}]
+
+       ["/js/*" {:get {:handler (fn [request]
+                                  (let [uri (:uri request)
+                                        resource-path (str "public" uri)
+                                        resource (clojure.java.io/resource resource-path)]
+                                    (println "JS request - URI:" uri "Resource path:" resource-path "Resource found:" resource)
+                                    (if resource
+                                      {:status 200
+                                       :headers {"Content-Type" "application/javascript"}
+                                       :body (slurp resource)}
+                                      {:status 404 :body "Not found"})))}}]       
+       
+       ["/users/create" {:post user/create-user
                          :middleware [wrap-basic-auth
                                      wrap-params
                                      [wrap-json-body {:keywords? true}]
@@ -122,5 +160,6 @@
                            :middleware [wrap-basic-auth
                                        wrap-params
                                        [wrap-json-body {:keywords? true}]
-                                       wrap-json-response]}]])
+                                       wrap-json-response]}]
+       ])
     (ring/create-default-handler)))

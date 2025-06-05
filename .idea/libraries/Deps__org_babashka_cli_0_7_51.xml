@@ -1,9 +1,0 @@
-<component name="libraryTable">
-  <library name="Deps: org.babashka/cli:0.7.51">
-    <CLASSES>
-      <root url="jar://$MAVEN_REPOSITORY$/org/babashka/cli/0.7.51/cli-0.7.51.jar!/" />
-    </CLASSES>
-    <JAVADOC />
-    <SOURCES />
-  </library>
-</component>
