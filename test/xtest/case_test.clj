@@ -85,7 +85,7 @@
                   db/get-case-by-name (constantly nil)
                   db/get-project-by-id mock-db-get-project-by-id
                   db/insert-case! mock-db-insert-case]
-      (let [request {:body {:id "case-123"
+      (let [request {:body-params {:id "case-123"
                             :name "New Test Case"
                             :project-id "project-1"
                             :description "A new test case description"
@@ -93,7 +93,7 @@
                             :tags valid-tags}}
             response (case/create-case request)]
         (is (= 201 (:status response)))
-        (is (= "case-123" (get-in response [:body :_id])))
+        (is (= "case-123" (get-in response [:body :id])))
         (is (= "New Test Case" (get-in response [:body :name])))
         (is (= "project-1" (get-in response [:body :project-id])))
         (is (= "A new test case description" (get-in response [:body :description])))
@@ -102,7 +102,7 @@
 
 (deftest test-create-case-missing-id
   (testing "Creating a case without id should fail"
-    (let [request {:body {:name "New Test Case"
+    (let [request {:body-params {:name "New Test Case"
                           :project-id "project-1"
                           :description "A description"
                           :steps valid-steps
@@ -113,7 +113,7 @@
 
 (deftest test-create-case-blank-id
   (testing "Creating a case with blank id should fail"
-    (let [request {:body {:id ""
+    (let [request {:body-params {:id ""
                           :name "New Test Case"
                           :project-id "project-1"
                           :description "A description"
@@ -127,7 +127,7 @@
   (testing "Creating a case with invalid id format should fail"
     (let [invalid-ids ["case" "case-" "case-abc" "test-123" "123" "case-123-extra"]]
       (doseq [invalid-id invalid-ids]
-        (let [request {:body {:id invalid-id
+        (let [request {:body-params {:id invalid-id
                               :name "New Test Case"
                               :project-id "project-1"
                               :description "A description"
@@ -146,7 +146,7 @@
                   db/insert-case! mock-db-insert-case]
       (let [valid-ids ["case-1" "case-123" "case-0" "case-999999"]]
         (doseq [valid-id valid-ids]
-          (let [request {:body {:id valid-id
+          (let [request {:body-params {:id valid-id
                                 :name "New Test Case"
                                 :project-id "project-1"
                                 :description "A description"
@@ -155,11 +155,11 @@
                 response (case/create-case request)]
             (is (= 201 (:status response))
                 (str "ID '" valid-id "' should be valid"))
-            (is (= valid-id (get-in response [:body :_id])))))))))
+            (is (= valid-id (get-in response [:body :id])))))))))
 
 (deftest test-create-case-missing-name
   (testing "Creating a case without name should fail"
-    (let [request {:body {:id "case-123"
+    (let [request {:body-params {:id "case-123"
                           :project-id "project-1"
                           :description "A description"
                           :steps valid-steps
@@ -170,7 +170,7 @@
 
 (deftest test-create-case-blank-name
   (testing "Creating a case with blank name should fail"
-    (let [request {:body {:id "case-123"
+    (let [request {:body-params {:id "case-123"
                           :name ""
                           :project-id "project-1"
                           :description "A description"
@@ -182,7 +182,7 @@
 
 (deftest test-create-case-missing-project-id
   (testing "Creating a case without project-id should fail"
-    (let [request {:body {:id "case-123"
+    (let [request {:body-params {:id "case-123"
                           :name "New Test Case"
                           :description "A description"
                           :steps valid-steps
@@ -193,7 +193,7 @@
 
 (deftest test-create-case-blank-project-id
   (testing "Creating a case with blank project-id should fail"
-    (let [request {:body {:id "case-123"
+    (let [request {:body-params {:id "case-123"
                           :name "New Test Case"
                           :project-id ""
                           :description "A description"
@@ -205,7 +205,7 @@
 
 (deftest test-create-case-missing-description
   (testing "Creating a case without description should fail"
-    (let [request {:body {:id "case-123"
+    (let [request {:body-params {:id "case-123"
                           :name "New Test Case"
                           :project-id "project-1"
                           :steps valid-steps
@@ -216,7 +216,7 @@
 
 (deftest test-create-case-blank-description
   (testing "Creating a case with blank description should fail"
-    (let [request {:body {:id "case-123"
+    (let [request {:body-params {:id "case-123"
                           :name "New Test Case"
                           :project-id "project-1"
                           :description ""
@@ -242,7 +242,7 @@
                                ;; Missing postcondition key
                                {:steps [{:description "desc" :precondition "pre"}]}]]
       (doseq [{:keys [steps]} invalid-steps-cases]
-        (let [request {:body {:id "case-123"
+        (let [request {:body-params {:id "case-123"
                               :name "New Test Case"
                               :project-id "project-1"
                               :description "A description"
@@ -270,7 +270,7 @@
                                     ;; Empty steps vector
                                     []]]
         (doseq [steps valid-steps-variations]
-          (let [request {:body {:id "case-123"
+          (let [request {:body-params {:id "case-123"
                                 :name "New Test Case"
                                 :project-id "project-1"
                                 :description "A description"
@@ -291,7 +291,7 @@
                               {:tags [true false]}
                               {:tags [{:not "string"}]}]]
       (doseq [{:keys [tags]} invalid-tags-cases]
-        (let [request {:body {:id "case-123"
+        (let [request {:body-params {:id "case-123"
                               :name "New Test Case"
                               :project-id "project-1"
                               :description "A description"
@@ -318,7 +318,7 @@
                                    ;; Tags with special characters
                                    ["tag-with-dash" "tag_with_underscore" "tag.with.dots"]]]
         (doseq [tags valid-tags-variations]
-          (let [request {:body {:id "case-123"
+          (let [request {:body-params {:id "case-123"
                                 :name "New Test Case"
                                 :project-id "project-1"
                                 :description "A description"
@@ -334,7 +334,7 @@
     (with-redefs [db/get-case-by-id mock-db-get-case-by-id
                   db/get-case-by-name (constantly nil)
                   db/get-project-by-id mock-db-get-project-by-id]
-      (let [request {:body {:id "case-1"
+      (let [request {:body-params {:id "case-1"
                             :name "Different Name"
                             :project-id "project-1"
                             :description "A description"
@@ -349,7 +349,7 @@
     (with-redefs [db/get-case-by-id (constantly nil)
                   db/get-case-by-name mock-db-get-case-by-name
                   db/get-project-by-id mock-db-get-project-by-id]
-      (let [request {:body {:id "case-999"
+      (let [request {:body-params {:id "case-999"
                             :name "Test Case One"
                             :project-id "project-1"
                             :description "A description"
@@ -364,7 +364,7 @@
     (with-redefs [db/get-case-by-id (constantly nil)
                   db/get-case-by-name (constantly nil)
                   db/get-project-by-id mock-db-get-project-by-id]
-      (let [request {:body {:id "case-123"
+      (let [request {:body-params {:id "case-123"
                             :name "New Test Case"
                             :project-id "project-999"
                             :description "A description"
@@ -382,55 +382,56 @@
             response (case/get-cases request)]
         (is (= 200 (:status response)))
         (is (= 3 (count (:body response))))
-        (is (= "case-1" (get-in response [:body 0 :_id])))
-        (is (= "case-2" (get-in response [:body 1 :_id])))
-        (is (= "case-3" (get-in response [:body 2 :_id])))))))
+        (is (= "case-1" (-> response :body first :id)))
+        (is (= "case-2" (-> response :body second :id)))
+        (is (= "case-3"  (:id (nth (:body response) 2))))))))
 
 (deftest test-get-cases-by-ids
   (testing "Getting cases by specific ids should return filtered cases"
-    (with-redefs [db/get-cases-filtered mock-db-get-cases-filtered]
-      (let [request {:query-params {"ids" "case-1,case-3"}}
+    (with-redefs [db/get-cases-filtered mock-db-get-cases-filtered
+                  db/get-cases mock-db-get-cases]
+      (let [request {:query-params {:ids "case-1,case-3"}}
             response (case/get-cases request)]
         (is (= 200 (:status response)))
         (is (= 2 (count (:body response))))
-        (is (= "case-1" (get-in response [:body 0 :_id])))
-        (is (= "case-3" (get-in response [:body 1 :_id])))))))
+        (is (= "case-1" (-> response :body first :id)))
+        (is (= "case-3" (-> response :body second :id)))))))
 
 (deftest test-get-cases-by-single-id
   (testing "Getting cases by single id should work"
     (with-redefs [db/get-cases-filtered mock-db-get-cases-filtered]
-      (let [request {:query-params {"ids" "case-2"}}
+      (let [request {:query-params {:ids "case-2"}}
             response (case/get-cases request)]
         (is (= 200 (:status response)))
         (is (= 1 (count (:body response))))
-        (is (= "case-2" (get-in response [:body 0 :_id])))
-        (is (= "Test Case Two" (get-in response [:body 0 :name])))))))
+        (is (= "case-2" (-> response :body first :id)))
+        (is (= "Test Case Two" (-> response :body first :name)))))))
 
 (deftest test-get-cases-by-names
   (testing "Getting cases by specific names should return filtered cases"
     (with-redefs [db/get-cases-filtered mock-db-get-cases-filtered]
-      (let [request {:query-params {"names" "Test Case One,Test Case Three"}}
+      (let [request {:query-params {:names "Test Case One,Test Case Three"}}
             response (case/get-cases request)]
         (is (= 200 (:status response)))
         (is (= 2 (count (:body response))))
-        (is (= "Test Case One" (get-in response [:body 0 :name])))
-        (is (= "Test Case Three" (get-in response [:body 1 :name])))))))
+        (is (= "Test Case One" (-> response :body first :name)))
+        (is (= "Test Case Three" (-> response :body second :name)))))))
 
 (deftest test-get-cases-by-project-ids
   (testing "Getting cases by project ids should return filtered cases"
     (with-redefs [db/get-cases-filtered mock-db-get-cases-filtered]
-      (let [request {:query-params {"project-ids" "project-1"}}
+      (let [request {:query-params {:project-ids "project-1"}}
             response (case/get-cases request)]
         (is (= 200 (:status response)))
         (is (= 2 (count (:body response))))
-        (is (= "project-1" (get-in response [:body 0 :project-id])))
-        (is (= "project-1" (get-in response [:body 1 :project-id])))))))
+        (is (= "project-1" (-> response :body first :project-id)))
+        (is (= "project-1" (-> response :body second :project-id)))))))
 
 (deftest test-get-cases-multiple-filters
   (testing "Getting cases with multiple filters should apply AND condition"
     (with-redefs [db/get-cases-filtered mock-db-get-cases-filtered]
-      (let [request {:query-params {"ids" "case-1,case-2,case-3"
-                                    "project-ids" "project-1"}}
+      (let [request {:query-params {:ids "case-1,case-2,case-3"
+                                    :project-ids "project-1"}}
             response (case/get-cases request)]
         (is (= 200 (:status response)))
         (is (= 2 (count (:body response))))
@@ -440,7 +441,7 @@
 (deftest test-get-cases-nonexistent-filters
   (testing "Getting cases with nonexistent filters should return empty list"
     (with-redefs [db/get-cases-filtered mock-db-get-cases-filtered]
-      (let [request {:query-params {"ids" "case-999,case-888"}}
+      (let [request {:query-params {:ids "case-999,case-888"}}
             response (case/get-cases request)]
         (is (= 200 (:status response)))
         (is (= 0 (count (:body response))))))))
@@ -448,17 +449,17 @@
 (deftest test-get-cases-empty-filters
   (testing "Getting cases with empty filter parameters should return empty list"
     (with-redefs [db/get-cases-filtered mock-db-get-cases-filtered]
-      (let [request1 {:query-params {"ids" ""}}
+      (let [request1 {:query-params {:ids ""}}
             response1 (case/get-cases request1)]
         (is (= 200 (:status response1)))
         (is (= 0 (count (:body response1)))))
       
-      (let [request2 {:query-params {"names" ""}}
+      (let [request2 {:query-params {:names ""}}
             response2 (case/get-cases request2)]
         (is (= 200 (:status response2)))
         (is (= 0 (count (:body response2)))))
       
-      (let [request3 {:query-params {"project-ids" ""}}
+      (let [request3 {:query-params {:project-ids ""}}
             response3 (case/get-cases request3)]
         (is (= 200 (:status response3)))
         (is (= 0 (count (:body response3))))))))
@@ -519,7 +520,7 @@
                           "very-long-tag-name-that-might-test-character-limits-and-boundaries"
                           "unicode-tag-ñáéíóú"
                           "tag with spaces"]
-            request {:body {:id "case-123"
+            request {:body-params {:id "case-123"
                             :name "Complex Test Case"
                             :project-id "project-1"
                             :description "Description with special chars and unicode: ñáéíóú !@#$%"
@@ -537,7 +538,7 @@
                   db/get-project-by-id mock-db-get-project-by-id
                   db/insert-case! mock-db-insert-case]
       ;; Empty arrays
-      (let [request1 {:body {:id "case-123"
+      (let [request1 {:body-params {:id "case-123"
                              :name "Empty Arrays Case"
                              :project-id "project-1"
                              :description "Testing empty arrays"
@@ -549,7 +550,7 @@
         (is (= [] (get-in response1 [:body :tags]))))
       
       ;; Single item arrays
-      (let [request2 {:body {:id "case-124"
+      (let [request2 {:body-params {:id "case-124"
                              :name "Single Item Case"
                              :project-id "project-1"
                              :description "Testing single items"
@@ -564,24 +565,24 @@
   (testing "Various filter combinations should work correctly"
     (with-redefs [db/get-cases-filtered mock-db-get-cases-filtered]
       ;; All three filters
-      (let [request1 {:query-params {"ids" "case-1,case-2"
-                                     "names" "Test Case One,Test Case Two"
-                                     "project-ids" "project-1"}}
+      (let [request1 {:query-params {:ids "case-1,case-2"
+                                     :names "Test Case One,Test Case Two"
+                                     :project-ids "project-1"}}
             response1 (case/get-cases request1)]
         (is (= 200 (:status response1)))
         (is (= 2 (count (:body response1)))))
       
       ;; Two filters that should intersect
-      (let [request2 {:query-params {"ids" "case-1,case-3"
-                                     "project-ids" "project-1"}}
+      (let [request2 {:query-params {:ids "case-1,case-3"
+                                     :project-ids "project-1"}}
             response2 (case/get-cases request2)]
         (is (= 200 (:status response2)))
         (is (= 1 (count (:body response2))))  ;; Only case-1 matches both
-        (is (= "case-1" (get-in response2 [:body 0 :_id]))))
+        (is (= "case-1" (-> response2 :body first :id))))
       
       ;; Filters with no intersection
-      (let [request3 {:query-params {"ids" "case-3"
-                                     "project-ids" "project-1"}}
+      (let [request3 {:query-params {:ids "case-3"
+                                     :project-ids "project-1"}}
             response3 (case/get-cases request3)]
         (is (= 200 (:status response3)))
         (is (= 0 (count (:body response3))))))))

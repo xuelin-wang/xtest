@@ -57,7 +57,7 @@
       (let [request {:body-params {:id "project-123" :name "New Project"}}
             response (project/create-project request)]
         (is (= 201 (:status response)))
-        (is (= "project-123" (get-in response [:body :_id])))
+        (is (= "project-123" (get-in response [:body :id])))
         (is (= "New Project" (get-in response [:body :name])))))))
 
 (deftest test-create-project-missing-name
@@ -116,7 +116,7 @@
                 response (project/create-project request)]
             (is (= 201 (:status response))
                 (str "ID '" valid-id "' should be valid"))
-            (is (= valid-id (get-in response [:body :_id])))))))))
+            (is (= valid-id (get-in response [:body :id])))))))))
 
 (deftest test-create-project-duplicate-id
   (testing "Creating a project with existing id should fail"
@@ -151,7 +151,7 @@
 (deftest test-get-projects-by-names
   (testing "Getting projects by specific names should return filtered projects"
     (with-redefs [db/get-projects-by-names mock-db-get-projects-by-names]
-      (let [request {:params {"names" "Test Project One,Test Project Three"}}
+      (let [request {:params {:names "Test Project One,Test Project Three"}}
             response (project/get-projects request)]
         (is (= 200 (:status response)))
         (is (= 2 (count (:body response))))
@@ -161,7 +161,7 @@
 (deftest test-get-projects-by-single-name
   (testing "Getting projects by single name should work"
     (with-redefs [db/get-projects-by-names mock-db-get-projects-by-names]
-      (let [request {:params {"names" "Test Project Two"}}
+      (let [request {:params {:names "Test Project Two"}}
             response (project/get-projects request)]
         (is (= 200 (:status response)))
         (is (= 1 (count (:body response))))
@@ -171,7 +171,7 @@
 (deftest test-get-projects-by-nonexistent-names
   (testing "Getting projects by nonexistent names should return empty list"
     (with-redefs [db/get-projects-by-names mock-db-get-projects-by-names]
-      (let [request {:params {"names" "Nonexistent Project,Another Missing"}}
+      (let [request {:params {:names "Nonexistent Project,Another Missing"}}
             response (project/get-projects request)]
         (is (= 200 (:status response)))
         (is (= 0 (count (:body response))))))))
@@ -179,7 +179,7 @@
 (deftest test-get-projects-by-ids
   (testing "Getting projects by specific ids should return filtered projects"
     (with-redefs [db/get-projects-by-ids mock-db-get-projects-by-ids]
-      (let [request {:params {"ids" "project-1,project-3"}}
+      (let [request {:params {:ids "project-1,project-3"}}
             response (project/get-projects request)]
         (is (= 200 (:status response)))
         (is (= 2 (count (:body response))))
@@ -189,7 +189,7 @@
 (deftest test-get-projects-by-single-id
   (testing "Getting projects by single id should work"
     (with-redefs [db/get-projects-by-ids mock-db-get-projects-by-ids]
-      (let [request {:params {"ids" "project-2"}}
+      (let [request {:params {:ids "project-2"}}
             response (project/get-projects request)]
         (is (= 200 (:status response)))
         (is (= 1 (count (:body response))))
@@ -199,14 +199,14 @@
 (deftest test-get-projects-by-nonexistent-ids
   (testing "Getting projects by nonexistent ids should return empty list"
     (with-redefs [db/get-projects-by-ids mock-db-get-projects-by-ids]
-      (let [request {:params {"ids" "project-999,project-888"}}
+      (let [request {:params {:ids "project-999,project-888"}}
             response (project/get-projects request)]
         (is (= 200 (:status response)))
         (is (= 0 (count (:body response))))))))
 
 (deftest test-get-projects-both-names-and-ids
   (testing "Getting projects with both names and ids parameters should fail"
-    (let [request {:params {"names" "Test Project One" "ids" "project-1"}}
+    (let [request {:params {:names "Test Project One" :ids "project-1"}}
           response (project/get-projects request)]
       (is (= 400 (:status response)))
       (is (= "Cannot specify both 'names' and 'ids' parameters" (get-in response [:body :error]))))))
@@ -284,7 +284,7 @@
                 response (project/create-project request)]
             (is (= 201 (:status response))
                 (str "Project ID '" id "' should be valid"))
-            (is (= id (get-in response [:body :_id])))))))))
+            (is (= id (get-in response [:body :id])))))))))
 
 (deftest test-mixed-parameter-scenarios
   (testing "Various parameter combinations in get-projects"
@@ -292,18 +292,18 @@
                   db/get-projects-by-names mock-db-get-projects-by-names
                   db/get-projects-by-ids mock-db-get-projects-by-ids]
       ;; Empty string parameters should not crash
-      (let [request1 {:params {"names" ""}}
+      (let [request1 {:params {:names ""}}
             response1 (project/get-projects request1)]
         (is (= 200 (:status response1)))
         (is (= 0 (count (:body response1)))))
       
-      (let [request2 {:params {"ids" ""}}
+      (let [request2 {:params {:ids ""}}
             response2 (project/get-projects request2)]
         (is (= 200 (:status response2)))
         (is (= 0 (count (:body response2)))))
       
       ;; Mixed valid and invalid names/ids
-      (let [request3 {:params {"names" "Test Project One,Nonexistent Project"}}
+      (let [request3 {:params {:names "Test Project One,Nonexistent Project"}}
             response3 (project/get-projects request3)]
         (is (= 200 (:status response3)))
         (is (= 1 (count (:body response3))))
@@ -314,7 +314,7 @@
     (with-redefs [db/get-project-by-name mock-db-get-project-by-name
                   db/get-projects-by-names mock-db-get-projects-by-names]
       ;; Case-sensitive name lookup should not find projects
-      (let [request {:params {"names" "test project one"}}  ; lowercase
+      (let [request {:params {:names "test project one"}}  ; lowercase
             response (project/get-projects request)]
         (is (= 200 (:status response)))
         (is (= 0 (count (:body response))))))))

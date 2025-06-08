@@ -1,5 +1,6 @@
 (ns xtest.api.project
   (:require [xtest.api.db :as db]
+            [xtest.api.util :as util]
             [clojure.string :as str]))
 
 (defn create-project
@@ -34,29 +35,28 @@
       (let [project {:_id id :name name}
             inserted (db/insert-project! project)]
         {:status 201
-         :body inserted}))))
+         :body (util/replace_uderscore_id inserted)}))))
 
 (defn get-projects
   "Retrieves projects by names or ids via URL query parameters.
    If no parameters specified, returns all projects.
    Returns 200 with the project maps or empty list if none found."
   [{:keys [params]}]
-  (let [names-param (get params "names")
-        ids-param (get params "ids")
-        names (when names-param (str/split names-param #","))
-        ids (when ids-param (str/split ids-param #","))]
+  (let [{:keys [names ids]} params
+        names-list (when names (str/split names #","))
+        ids-list (when ids (str/split ids #","))]
     (cond
-      (and names ids)
+      (and names-list ids-list)
       {:status 400
        :body {:error "Cannot specify both 'names' and 'ids' parameters"}}
       
-      names
-      (let [projects (db/get-projects-by-names names)]
+      names-list
+      (let [projects (db/get-projects-by-names names-list)]
         {:status 200
          :body projects})
       
-      ids
-      (let [projects (db/get-projects-by-ids ids)]
+      ids-list
+      (let [projects (db/get-projects-by-ids ids-list)]
         {:status 200
          :body projects})
       

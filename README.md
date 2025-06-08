@@ -1,11 +1,9 @@
 # xtest
 
 ## web ui
-Use weave (https://github.com/nakkaya/weave) for simple 
-model without splitting frontend and backend.
-Web server uses 9090. Ensure starts api server, db server before testing web page http://localhost:9090
+Web server uses 9090. Ensure starts api server, db server before testing web page http://localhost:9090/index.html
 
-Start ui at port 9090
+Start ui and apis server at port 9090
 ```
 clj -X:run-x
 ```
@@ -29,10 +27,6 @@ ghcr.io/xtdb/xtdb
 ```
 
 ## rest service
-Start api server at port 3100
-```
-clj -M:run-api
-```
 ### apis
 * projects
 
@@ -89,22 +83,22 @@ Each case, tests run, test run, project, report can have a number attachments li
 ### example commands
 ```
 # run tests in namespace
-clojure -M:test   -n xtest.api.case-test
+clojure -M:test   -n xtest.case-test
 
 # create a user (first, no basic token passed)
-curl -i -X POST http://localhost:3100/users/create          -H "Content-Type: application/json"          -d '{
+curl -i -X POST http://localhost:9090/api/users/create          -H "Content-Type: application/json"          -d '{
                "first-name": "Alice",
                "last-name" : "Smith3",
                "email"     : "alice.smith3@example.com",
                "password"  : "Secur3P@ssword!"}'
 
 # fetch a user
- curl -G http://localhost:3100/users/get   \
+curl -G http://localhost:9090/api/users/get   \
  -H "Authorization: Basic YWxpY2Uuc21pdGgzQGV4YW1wbGUuY29tOlNlY3VyM1BAc3N3b3JkIQ=="   \
-        -H "Accept: application/json"          --data-urlencode "email=alice.smith3@example.com"}'
+        -H "Accept: application/json"          --data-urlencode "email=alice.smith3@example.com"
  
  # update password
- curl -i -X POST http://localhost:3100/users/update      \
+ curl -i -X POST http://localhost:9090/api/users/update      \
   -H "Authorization: Basic YWxpY2Uuc21pdGgzQGV4YW1wbGUuY29tOlNlY3VyM1BAc3N3b3JkIQ=="   \
      -H "Content-Type: application/json"          -d '{
                "new-password": "abcdeABCDE01!",
@@ -113,7 +107,7 @@ curl -i -X POST http://localhost:3100/users/create          -H "Content-Type: ap
 
 
 # pass basic token of existing user
-curl -i -X POST http://localhost:3100/users/create   -H "Authorization: Basic YWxpY2Uuc21pdGgzQGV4YW1wbGUuY29tOlNlY3VyM1BAc3N3b3JkIQ=="        -H "Content-Type: application/json"          -d '{
+curl -i -X POST http://localhost:9090/api/users/create   -H "Authorization: Basic YWxpY2Uuc21pdGgzQGV4YW1wbGUuY29tOlNlY3VyM1BAc3N3b3JkIQ=="        -H "Content-Type: application/json"          -d '{
                "first-name": "Alice",
                "last-name" : "Smith3",
                "email"     : "alice.smith2@example.com",
@@ -121,6 +115,41 @@ curl -i -X POST http://localhost:3100/users/create   -H "Authorization: Basic YW
              }'
 
 
- curl -X POST "http://localhost:3100/users/login"        -H "Content-Type: application/json"        -d '{"email":"alice.smith3@example.com","password":"Secur3P@ssword!"}'
+ curl -X POST "http://localhost:9090/api/users/login"        -H "Content-Type: application/json"        -d '{"email":"alice.smith3@example.com","password":"Secur3P@ssword!"}'
+
+
+# fetch projects by ids
+curl -G http://localhost:9090/api/projects/get   \
+ -H "Authorization: Basic YWxpY2Uuc21pdGgzQGV4YW1wbGUuY29tOlNlY3VyM1BAc3N3b3JkIQ=="   \
+        -H "Accept: application/json"          --data-urlencode "ids=project-1,project-2"
+ 
+# fetch projects by names
+curl -G http://localhost:9090/api/projects/get   \
+ -H "Authorization: Basic YWxpY2Uuc21pdGgzQGV4YW1wbGUuY29tOlNlY3VyM1BAc3N3b3JkIQ=="   \
+        -H "Accept: application/json"          --data-urlencode "names=Test project"
+
+
+# create a project
+curl -i -X POST http://localhost:9090/api/projects/create      \
+ -H "Authorization: Basic YWxpY2Uuc21pdGgzQGV4YW1wbGUuY29tOlNlY3VyM1BAc3N3b3JkIQ=="   \
+    -H "Content-Type: application/json"          -d '{
+               "id": "project-2",
+               "name" : "Test Project 2"}'
+
+# create a case
+curl -i -X POST http://localhost:9090/api/cases/create      \
+ -H "Authorization: Basic YWxpY2Uuc21pdGgzQGV4YW1wbGUuY29tOlNlY3VyM1BAc3N3b3JkIQ=="   \
+    -H "Content-Type: application/json"          -d '{
+               "id": "case-1",
+               "name": "case 1",
+                "project-id": "project-1",
+                 "description": "case 1 for project 1",
+                 "steps":[{"description": "step 1", "precondition": "precondition 1", "postcondition": "postcondition1"}], 
+                 "tags":["name1:value1"]}'
+
+# fetch cases
+curl -G http://localhost:9090/api/cases/get   \
+ -H "Authorization: Basic YWxpY2Uuc21pdGgzQGV4YW1wbGUuY29tOlNlY3VyM1BAc3N3b3JkIQ=="   \
+        -H "Accept: application/json"          --data-urlencode "ids=project-1,project-2"
 
 ```

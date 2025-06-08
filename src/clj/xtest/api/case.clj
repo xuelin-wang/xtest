@@ -1,5 +1,6 @@
 (ns xtest.api.case
   (:require [xtest.api.db :as db]
+            [xtest.api.util :as util]
             [clojure.string :as str]))
 
 (defn- valid-step?
@@ -27,8 +28,8 @@
    Expects a Ring request map with JSON body parsed as keywords.
    Returns a Ring response map with status 201 and created case in the body,
    or status 400 with an error message if validation fails."
-  [{:keys [body]}]
-  (let [{:keys [id name project-id description steps tags]} body]
+  [{:keys [body-params]}]
+  (let [{:keys [id name project-id description steps tags]} body-params]
     (cond
       (str/blank? id)
       {:status 400
@@ -79,7 +80,7 @@
                        :tags tags}
             inserted (db/insert-case! case-data)]
         {:status 201
-         :body inserted}))))
+         :body (util/replace_uderscore_id inserted)}))))
 
 (defn get-cases
   "Retrieves cases by ids, names, or project-ids via URL query parameters.
@@ -87,25 +88,30 @@
    If no parameters specified, returns all cases.
    Returns 200 with the case maps or empty list if none found."
   [{:keys [query-params]}]
-  (let [ids-param (get query-params "ids")
-        names-param (get query-params "names")
-        project-ids-param (get query-params "project-ids")
-        ids (when ids-param (str/split ids-param #","))
-        names (when names-param (str/split names-param #","))
-        project-ids (when project-ids-param (str/split project-ids-param #","))]
+  (let [ids-param (:ids query-params)
+        names-param (:names query-params)
+        project-ids-param (:project-ids query-params)]
     
     (cond
-      ;; If any filters are provided, use filtered query
-      (or ids names project-ids)
-      (let [cases (db/get-cases-filtered {:ids ids :names names :project-ids project-ids})]
+      ;; If any parameter is provided but is an empty string, return empty list
+      (or (= ids-param "") (= names-param "") (= project-ids-param ""))
+      {:status 200
+       :body []}
+       
+      ;; If any filters are provided with values, use filtered query
+      (or ids-param names-param project-ids-param)
+      (let [ids (when ids-param (str/split ids-param #","))
+            names (when names-param (str/split names-param #","))
+            project-ids (when project-ids-param (str/split project-ids-param #","))
+            cases (db/get-cases-filtered {:ids ids :names names :project-ids project-ids})]
         {:status 200
-         :body cases})
+         :body (map util/replace_uderscore_id cases)})
       
-      ;; No filters, return all cases
+      ;; No filters provided, return all cases
       :else
       (let [cases (db/get-cases)]
         {:status 200
-         :body cases}))))
+         :body (map util/replace_uderscore_id cases)}))))
 
 (defn delete-case
   "Deletes a case by id via JSON body.
