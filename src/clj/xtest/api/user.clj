@@ -22,10 +22,14 @@
    Returns a Ring response map with status 201 and created user in the body,
    or status 400 with an error message if the password does not meet complexity requirements."
    [{:keys [body-params]}]
+   (println body-params)
    (let [{:keys [first-name last-name email password]} body-params]
      (if-not (valid-password? password)
        {:status 400
-        :body {:error "Password must be at least 10 characters long, have at least one lowercase ASCII letter, one uppercase ASCII letter, one digit, and one special symbol (e.g. ! @ # $ % ^ & * ( ) - _ = + [ ] { } | / \\ < > , . : ; \" ')."}}
+        :body {:error
+               (str "Password must be at least 10 characters long, have at least one lowercase ASCII letter, "
+                    "one uppercase ASCII letter, one digit, and one special symbol "
+                    "(e.g. ! @ # $ % ^ & * ( ) - _ = + [ ] { } | / \\ < > , . : ; \" ').")}}
        (let [id (str (java.util.UUID/randomUUID))
              hash (-> (Password/hash password)
                       .withArgon2
@@ -76,7 +80,10 @@
             {:status 200
              :body result})
           {:status 400
-           :body {:error "Password must be at least 10 characters long, have at least one lowercase ASCII letter, one uppercase ASCII letter, one digit, and one special symbol (e.g. ! @ # $ % ^ & * ( ) - _ = + [ ] { } | / \\ < > , . : ; \" ')."}})
+           :body {:error
+                  (str "Password must be at least 10 characters long, have at least one lowercase ASCII letter, "
+                       "one uppercase ASCII letter, one digit, and one special symbol "
+                       "(e.g. ! @ # $ % ^ & * ( ) - _ = + [ ] { } | / \\ < > , . : ; \" ').")}})
         {:status 401
          :body {:error "Original password is incorrect"}})
       {:status 404

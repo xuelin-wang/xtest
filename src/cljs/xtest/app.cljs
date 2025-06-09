@@ -115,6 +115,22 @@
                                   (on-confirm)))}
                     "Yes")))))))
 
+(defn create-user [email password user-data]
+  (let [auth-header (str "Basic " (js/btoa (str email ":" password)))
+        headers (js/Headers.)]
+    ;(set! (.-Authorization headers) auth-header)
+    (.set headers "Authorization" auth-header)
+    (.set headers "Content-Type" "application/json")
+    (js/console.error "password:::")
+    (js/console.error (:password user-data))
+    (js/console.error (js/JSON.stringify (clj->js user-data)) )
+    (-> (js/fetch "/api/users/create" 
+                  (js/Object. #js {:method "POST"
+                                   :headers headers
+                                   :body (js/JSON.stringify (clj->js user-data))}))
+        (.then #(.json %))
+        (.catch #(js/console.error "Error creating user:" %)))))
+
 (defn delete-user [email password user-id]
   (let [auth-header (str "Basic " (js/btoa (str email ":" password)))
         headers (js/Object.)]
@@ -135,7 +151,9 @@
         [new-user-email set-new-user-email] (hooks/use-state "")
         [new-user-first-name set-new-user-first-name] (hooks/use-state "")
         [new-user-last-name set-new-user-last-name] (hooks/use-state "")
-        [new-user-password set-new-user-password] (hooks/use-state "")]
+        [new-user-password set-new-user-password] (hooks/use-state "")
+        [create-user-error set-create-user-error] (hooks/use-state nil)
+        [show-password set-show-password] (hooks/use-state false)]
     (println users)
     (<>
       ($ confirmation-dialog {:show show-dialog
@@ -178,6 +196,15 @@
                           :margin-bottom "20px"}}
             (d/h4 {:style {:margin-top 0
                            :margin-bottom "15px"}} "Create New User")
+            (when create-user-error
+              (d/div {:style {:color "#dc3545"
+                              :font-size "14px"
+                              :margin-bottom "15px"
+                              :padding "8px"
+                              :background-color "#f8d7da"
+                              :border "1px solid #f5c6cb"
+                              :border-radius "4px"}}
+                     create-user-error))
             (d/div {:style {:display "grid"
                             :grid-template-columns "1fr 1fr"
                             :gap "15px"
@@ -229,15 +256,34 @@
                 (d/label {:style {:display "block"
                                   :margin-bottom "5px"
                                   :font-weight "bold"}} "Password:")
-                (d/input {:type "password"
-                          :value new-user-password
-                          :onChange (fn [e] (set-new-user-password (.. e -target -value)))
-                          :autoComplete "new-password"
-                          :style {:width "100%"
-                                  :padding "8px"
-                                  :border "1px solid #ccc"
-                                  :border-radius "4px"
-                                  :box-sizing "border-box"}})))
+                (d/div {:style {:position "relative"
+                                :display "flex"
+                                :align-items "center"}}
+                  (d/input {:type (if show-password "text" "password")
+                            :value new-user-password
+                            :onChange (fn [e] (set-new-user-password (.. e -target -value)))
+                            :autoComplete "new-password"
+                            :style {:width "100%"
+                                    :padding "8px 40px 8px 8px"
+                                    :border "1px solid #ccc"
+                                    :border-radius "4px"
+                                    :box-sizing "border-box"}})
+                  (d/button {:type "button"
+                             :style {:position "absolute"
+                                     :right "8px"
+                                     :background "none"
+                                     :border "none"
+                                     :cursor "pointer"
+                                     :padding "4px"
+                                     :display "flex"
+                                     :align-items "center"
+                                     :justify-content "center"
+                                     :font-size "16px"
+                                     :color "#6c757d"}
+                             :onClick (fn [e]
+                                        (.preventDefault e)
+                                        (set-show-password (not show-password)))}
+                            (if show-password "👁️" "🙈")))))
             (d/div {:style {:display "flex"
                             :gap "10px"}}
               (d/button {:style {:padding "8px 16px"
@@ -248,15 +294,30 @@
                                  :cursor "pointer"
                                  :font-size "14px"}
                          :onClick (fn []
-                                    (js/console.log "Creating user:" {:email new-user-email
-                                                                       :first-name new-user-first-name
-                                                                       :last-name new-user-last-name
-                                                                       :password new-user-password})
-                                    (set-new-user-email "")
-                                    (set-new-user-first-name "")
-                                    (set-new-user-last-name "")
-                                    (set-new-user-password "")
-                                    (set-show-create-form false))}
+                                    (let [user-data {:email new-user-email
+                                                     :first-name new-user-first-name
+                                                     :last-name new-user-last-name
+                                                     :password new-user-password}]
+                                      (set-create-user-error nil)
+                                      (-> (create-user email password user-data)
+                                          (.then (fn [result]
+                                                   (if (.-error result)
+                                                     (do
+                                                       (js/console.error "Error creating user:" (.-error result))
+                                                       (set-create-user-error (str "Error: " (.-error result))))
+                                                     (do
+                                                       (js/console.log "User created successfully:" result)
+                                                       (set-new-user-email "")
+                                                       (set-new-user-first-name "")
+                                                       (set-new-user-last-name "")
+                                                       (set-new-user-password "")
+                                                       (set-create-user-error nil)
+                                                       (set-show-create-form false)
+                                                       (when on-user-deleted
+                                                         (on-user-deleted))))))
+                                          (.catch (fn [error]
+                                                    (js/console.error "Error creating user:" error)
+                                                    (set-create-user-error (str "Network error: " error)))))))}
                         "Create")
               (d/button {:style {:padding "8px 16px"
                                  :background-color "#6c757d"
@@ -270,6 +331,8 @@
                                     (set-new-user-first-name "")
                                     (set-new-user-last-name "")
                                     (set-new-user-password "")
+                                    (set-create-user-error nil)
+                                    (set-show-password false)
                                     (set-show-create-form false))}
                         "Cancel")))))
         (if (empty? users)
