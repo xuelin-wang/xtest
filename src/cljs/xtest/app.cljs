@@ -130,7 +130,12 @@
 (defnc users-table
   [{:keys [users email password on-user-deleted]}]
   (let [[show-dialog set-show-dialog] (hooks/use-state false)
-        [user-to-delete set-user-to-delete] (hooks/use-state nil)]
+        [user-to-delete set-user-to-delete] (hooks/use-state nil)
+        [show-create-form set-show-create-form] (hooks/use-state false)
+        [new-user-email set-new-user-email] (hooks/use-state "")
+        [new-user-first-name set-new-user-first-name] (hooks/use-state "")
+        [new-user-last-name set-new-user-last-name] (hooks/use-state "")
+        [new-user-password set-new-user-password] (hooks/use-state "")]
     (println users)
     (<>
       ($ confirmation-dialog {:show show-dialog
@@ -149,8 +154,125 @@
                                            (set-show-dialog false)
                                            (set-user-to-delete nil))})
       (d/div {:style {:margin-top "20px"}}
-    (d/h3 "Users")
-    (if (empty? users)
+        (d/div {:style {:display "flex"
+                        :justify-content "space-between"
+                        :align-items "center"
+                        :margin-bottom "15px"}}
+          (d/h3 {:style {:margin 0}} "Users")
+          (d/button {:style {:padding "8px 16px"
+                             :background-color "#28a745"
+                             :color "white"
+                             :border "none"
+                             :border-radius "4px"
+                             :cursor "pointer"
+                             :font-size "14px"}
+                     :onClick (fn []
+                                (set-show-create-form (not show-create-form)))}
+                    "Create User"))
+        
+        (when show-create-form
+          (d/div {:style {:background-color "#f8f9fa"
+                          :border "1px solid #dee2e6"
+                          :border-radius "4px"
+                          :padding "20px"
+                          :margin-bottom "20px"}}
+            (d/h4 {:style {:margin-top 0
+                           :margin-bottom "15px"}} "Create New User")
+            (d/div {:style {:display "grid"
+                            :grid-template-columns "1fr 1fr"
+                            :gap "15px"
+                            :margin-bottom "15px"}}
+              (d/div
+                (d/label {:style {:display "block"
+                                  :margin-bottom "5px"
+                                  :font-weight "bold"}} "Email:")
+                (d/input {:type "email"
+                          :value new-user-email
+                          :onChange (fn [e] (set-new-user-email (.. e -target -value)))
+                          :autoComplete "off"
+                          :style {:width "100%"
+                                  :padding "8px"
+                                  :border "1px solid #ccc"
+                                  :border-radius "4px"
+                                  :box-sizing "border-box"}}))
+              (d/div
+                (d/label {:style {:display "block"
+                                  :margin-bottom "5px"
+                                  :font-weight "bold"}} "First Name:")
+                (d/input {:type "text"
+                          :value new-user-first-name
+                          :onChange (fn [e] (set-new-user-first-name (.. e -target -value)))
+                          :autoComplete "off"
+                          :style {:width "100%"
+                                  :padding "8px"
+                                  :border "1px solid #ccc"
+                                  :border-radius "4px"
+                                  :box-sizing "border-box"}})))
+            (d/div {:style {:display "grid"
+                            :grid-template-columns "1fr 1fr"
+                            :gap "15px"
+                            :margin-bottom "20px"}}
+              (d/div
+                (d/label {:style {:display "block"
+                                  :margin-bottom "5px"
+                                  :font-weight "bold"}} "Last Name:")
+                (d/input {:type "text"
+                          :value new-user-last-name
+                          :onChange (fn [e] (set-new-user-last-name (.. e -target -value)))
+                          :autoComplete "off"
+                          :style {:width "100%"
+                                  :padding "8px"
+                                  :border "1px solid #ccc"
+                                  :border-radius "4px"
+                                  :box-sizing "border-box"}}))
+              (d/div
+                (d/label {:style {:display "block"
+                                  :margin-bottom "5px"
+                                  :font-weight "bold"}} "Password:")
+                (d/input {:type "password"
+                          :value new-user-password
+                          :onChange (fn [e] (set-new-user-password (.. e -target -value)))
+                          :autoComplete "new-password"
+                          :style {:width "100%"
+                                  :padding "8px"
+                                  :border "1px solid #ccc"
+                                  :border-radius "4px"
+                                  :box-sizing "border-box"}})))
+            (d/div {:style {:display "flex"
+                            :gap "10px"}}
+              (d/button {:style {:padding "8px 16px"
+                                 :background-color "#007bff"
+                                 :color "white"
+                                 :border "none"
+                                 :border-radius "4px"
+                                 :cursor "pointer"
+                                 :font-size "14px"}
+                         :onClick (fn []
+                                    (js/console.log "Creating user:" {:email new-user-email
+                                                                       :first-name new-user-first-name
+                                                                       :last-name new-user-last-name
+                                                                       :password new-user-password})
+                                    (set-new-user-email "")
+                                    (set-new-user-first-name "")
+                                    (set-new-user-last-name "")
+                                    (set-new-user-password "")
+                                    (set-show-create-form false))}
+                        "Create")
+              (d/button {:style {:padding "8px 16px"
+                                 :background-color "#6c757d"
+                                 :color "white"
+                                 :border "none"
+                                 :border-radius "4px"
+                                 :cursor "pointer"
+                                 :font-size "14px"}
+                         :onClick (fn []
+                                    (set-new-user-email "")
+                                    (set-new-user-first-name "")
+                                    (set-new-user-last-name "")
+                                    (set-new-user-password "")
+                                    (set-show-create-form false))}
+                        "Cancel")))))
+        (if (empty? users)
       (d/p "Loading users...")
       (d/table {:style {:border-collapse "collapse"
                         :width "100%"
@@ -196,7 +318,7 @@
                                       (set-user-to-delete user)
                                       (set-show-dialog true))} 
                           "Delete"))))
-                       users))))))))
+                       users)))))))
 
 (defn fetch-users [email password]
   (let [auth-header (str "Basic " (js/btoa (str email ":" password)))
