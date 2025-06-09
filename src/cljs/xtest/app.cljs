@@ -48,10 +48,107 @@
                          :font-size "16px"}}
                 "Login"))))
 
+(defnc confirmation-dialog
+  [{:keys [show message on-confirm on-cancel position]}]
+  (let [[input-value set-input-value] (hooks/use-state "")]
+    (when show
+    (d/div {:style {:position "fixed"
+                    :top 0
+                    :left 0
+                    :right 0
+                    :bottom 0
+                    :background-color "rgba(0,0,0,0.5)"
+                    :display "flex"
+                    :align-items "center"
+                    :justify-content "center"
+                    :z-index 1000}}
+      (d/div {:style {:background-color "white"
+                      :border-radius "8px"
+                      :box-shadow "0 4px 6px rgba(0,0,0,0.1)"
+                      :padding "20px"
+                      :min-width "300px"
+                      :max-width "400px"
+                      :display "flex"
+                      :flex-direction "column"}}
+        (d/div {:style {:margin-bottom "20px"
+                        :font-size "16px"
+                        :line-height "1.5"
+                        :color "#333"}}
+               message)
+        (d/div {:style {:margin-bottom "40px"
+                        :margin-top "10px"}}
+          (d/input {:type "text"
+                    :value input-value
+                    :onChange (fn [e] (set-input-value (.. e -target -value)))
+                    :placeholder "Enter deLEte to confirm"
+                    :style {:width "100%"
+                            :padding "8px"
+                            :border "1px solid #ccc"
+                            :border-radius "4px"
+                            :box-sizing "border-box"
+                            :font-size "14px"
+                            :display "block"}}))
+        (d/div {:style {:display "flex"
+                        :justify-content "flex-end"
+                        :gap "10px"
+                        :margin-top "20px"
+                        :padding-top "10px"}}
+          (d/button {:style {:padding "8px 16px"
+                             :border "1px solid #ccc"
+                             :background-color "white"
+                             :border-radius "4px"
+                             :cursor "pointer"
+                             :font-size "14px"}
+                     :onClick on-cancel}
+                    "No")
+          (d/button {:style {:padding "8px 16px"
+                             :border "none"
+                             :background-color (if (= input-value "deLEte") "#dc3545" "#ccc")
+                             :color "white"
+                             :border-radius "4px"
+                             :cursor (if (= input-value "deLEte") "pointer" "not-allowed")
+                             :font-size "14px"}
+                     :disabled (not= input-value "deLEte")
+                     :onClick (fn []
+                                (when (= input-value "deLEte")
+                                  (set-input-value "")
+                                  (on-confirm)))}
+                    "Yes")))))))
+
+(defn delete-user [email password user-id]
+  (let [auth-header (str "Basic " (js/btoa (str email ":" password)))
+        headers (js/Object.)]
+    (set! (.-Authorization headers) auth-header)
+    (set! (.-Content-Type headers) "application/json")
+    (-> (js/fetch (str "/api/users/delete?id=" user-id) 
+                  (js/Object. #js {:method "POST"
+                                   :headers headers
+                                   }))
+        (.then #(.json %))
+        (.catch #(js/console.error "Error deleting user:" %)))))
+
 (defnc users-table
-  [{:keys [users]}]
-  (println users)
-  (d/div {:style {:margin-top "20px"}}
+  [{:keys [users email password on-user-deleted]}]
+  (let [[show-dialog set-show-dialog] (hooks/use-state false)
+        [user-to-delete set-user-to-delete] (hooks/use-state nil)]
+    (println users)
+    (<>
+      ($ confirmation-dialog {:show show-dialog
+                              :message (when user-to-delete
+                                         (str "Please confirm delete user " (.-email user-to-delete) " by entering word deLEte(case sensitive) below, and click \"Yes\" button at bottom of the dialog."))
+                              :on-confirm (fn []
+                                            (set-show-dialog false)
+                                            (when user-to-delete
+                                              (-> (delete-user email password (.-id user-to-delete))
+                                                  (.then (fn [result]
+                                                           (js/console.log "User deleted:" result)
+                                                           (set-user-to-delete nil)
+                                                           (when on-user-deleted
+                                                             (on-user-deleted)))))))
+                              :on-cancel (fn []
+                                           (set-show-dialog false)
+                                           (set-user-to-delete nil))})
+      (d/div {:style {:margin-top "20px"}}
     (d/h3 "Users")
     (if (empty? users)
       (d/p "Loading users...")
@@ -71,7 +168,11 @@
             (d/th {:style {:border "1px solid #ddd"
                            :padding "8px"
                            :background-color "#f2f2f2"
-                           :text-align "left"}} "Last Name")))
+                           :text-align "left"}} "Last Name")
+            (d/th {:style {:border "1px solid #ddd"
+                           :padding "8px"
+                           :background-color "#f2f2f2"
+                           :text-align "left"}} "Action")))
         (d/tbody
           (map-indexed
             (fn [idx user] (d/tr {:key idx}
@@ -80,8 +181,22 @@
               (d/td {:style {:border "1px solid #ddd"
                              :padding "8px"}} (aget user "first-name"))
               (d/td {:style {:border "1px solid #ddd"
-                             :padding "8px"}} (aget user "last-name"))))
-                       users))))))
+                             :padding "8px"}} (aget user "last-name"))
+              (d/td {:style {:border "1px solid #ddd"
+                             :padding "8px"}}
+                (d/button {:style {:background-color "#dc3545"
+                                   :color "white"
+                                   :border "none"
+                                   :padding "4px 8px"
+                                   :border-radius "4px"
+                                   :cursor "pointer"
+                                   :font-size "12px"}
+                           :onClick (fn [e]
+                                      (.preventDefault e)
+                                      (set-user-to-delete user)
+                                      (set-show-dialog true))} 
+                          "Delete"))))
+                       users))))))))
 
 (defn fetch-users [email password]
   (let [auth-header (str "Basic " (js/btoa (str email ":" password)))
@@ -138,7 +253,12 @@
                         :border "1px solid #dee2e6"
                         :border-radius "4px"}}
                (case selected-link
-                 "Users" ($ users-table {:users users})
+                 "Users" ($ users-table {:users users
+                                          :email email
+                                          :password password
+                                          :on-user-deleted (fn []
+                                                             (-> (fetch-users email password)
+                                                                 (.then #(set-users %))))})
                  (d/p (str "You clicked: " selected-link))))))))
 
 (defnc xtest-app
