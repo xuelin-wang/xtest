@@ -6,6 +6,13 @@
 (def ^:private special-chars
   #{\! \@ \# \$ \% \^ \& \* \( \) \- \_ \= \+ \[ \] \{ \} \| \/ \\ \< \> \, \. \: \; \" \'})
 
+(defn- valid-email?
+  "Return true if email is a valid email address format."
+  [email]
+  (and (string? email)
+       (not (clojure.string/blank? email))
+       (re-matches #"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$" email)))
+
 (defn- valid-password?
   "Return true if password is at least 10 characters long, contains at least one lowercase ASCII letter, one uppercase ASCII letter, one digit, and one special symbol."
   [password]
@@ -20,16 +27,27 @@
    "Creates a new user with provided first-name, last-name, email, and password.
    Expects a Ring request map with JSON body parsed as keywords.
    Returns a Ring response map with status 201 and created user in the body,
-   or status 400 with an error message if the password does not meet complexity requirements."
+   or status 400 with an error message if email is invalid, already exists, or password does not meet complexity requirements."
    [{:keys [body-params]}]
    (println body-params)
    (let [{:keys [first-name last-name email password]} body-params]
-     (if-not (valid-password? password)
+     (cond
+       (not (valid-email? email))
+       {:status 400
+        :body {:error "Please provide a valid email address."}}
+       
+       (db/get-user-by-email email)
+       {:status 400
+        :body {:error "A user with this email already exists."}}
+       
+       (not (valid-password? password))
        {:status 400
         :body {:error
                (str "Password must be at least 10 characters long, have at least one lowercase ASCII letter, "
                     "one uppercase ASCII letter, one digit, and one special symbol "
                     "(e.g. ! @ # $ % ^ & * ( ) - _ = + [ ] { } | / \\ < > , . : ; \" ').")}}
+       
+       :else
        (let [id (str (java.util.UUID/randomUUID))
              hash (-> (Password/hash password)
                       .withArgon2

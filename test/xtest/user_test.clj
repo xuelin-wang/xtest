@@ -93,6 +93,65 @@
               (str "Password '" invalid-pwd "' should be invalid"))
           (is (str/includes? (get-in response [:body :error]) "Password must be at least 10 characters")))))))
 
+;; Tests for email validation in create-user
+(deftest test-create-user-invalid-email-formats
+  (testing "Creating a user with invalid email formats should fail"
+    (let [invalid-emails ["invalid-email" 
+                          "missing@dot" 
+                          "@missing-local.com"
+                          "missing-at.com"
+                          "multiple@@at.com"
+                          "spaces in@email.com"
+                          "email@"
+                          "email@.com"
+                          ""
+                          nil
+                          "email@domain"
+                          "email.domain.com"]]
+      (doseq [invalid-email invalid-emails]
+        (let [request {:body-params (assoc test-user :email invalid-email)}
+              response (user/create-user request)]
+          (is (= 400 (:status response))
+              (str "Email '" invalid-email "' should be invalid"))
+          (is (= "Please provide a valid email address." (get-in response [:body :error]))))))))
+
+(deftest test-create-user-duplicate-email
+  (testing "Creating a user with existing email should fail"
+    (with-redefs [db/get-user-by-email mock-db-get-user-by-email]
+      (let [request {:body-params test-user}
+            response (user/create-user request)]
+        (is (= 400 (:status response)))
+        (is (= "A user with this email already exists." (get-in response [:body :error])))))))
+
+(deftest test-create-user-valid-email-formats
+  (testing "Creating a user with valid email formats should succeed"
+    (with-redefs [db/insert-user! mock-db-insert
+                  db/get-user-by-email (constantly nil)]
+      (let [valid-emails ["user@example.com"
+                          "user.name@example.com"
+                          "user+tag@example.com"
+                          "user_name@example.com"
+                          "user123@example.com"
+                          "user@subdomain.example.com"
+                          "user@example-domain.com"]]
+        (doseq [valid-email valid-emails]
+          (let [request {:body-params (assoc test-user :email valid-email)}
+                response (user/create-user request)]
+            (is (= 201 (:status response))
+                (str "Email '" valid-email "' should be valid"))
+            (is (= valid-email (get-in response [:body :email])))))))))
+
+(deftest test-create-user-email-validation-priority
+  (testing "Email validation should occur before password validation"
+    (let [request {:body-params {:first-name "Test"
+                                 :last-name "User"
+                                 :email "invalid-email"
+                                 :password "short"}}
+          response (user/create-user request)]
+      (is (= 400 (:status response)))
+      (is (= "Please provide a valid email address." (get-in response [:body :error]))
+          "Should fail on email validation first, not password validation"))))
+
 ;; Tests for get-users
 (deftest test-get-users-all
   (testing "Getting all users should return all users"
