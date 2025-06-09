@@ -3,12 +3,7 @@
             [helix.hooks :as hooks]
             [helix.dom :as d]
             ["react-dom/client" :as rdom]
-            [helix.part1 :as p1]
-            [helix.part2 :as p2]
-            [helix.part3 :as p3]
-            [helix.part4 :as p4]
-            [helix.part5 :as p5]
-            [helix.part6 :as p6]))
+           ))
 
 (defnc login-form
   [{:keys [email password on-email-change on-password-change on-login]}]
@@ -53,55 +48,113 @@
                          :font-size "16px"}}
                 "Login"))))
 
+(defnc users-table
+  [{:keys [users]}]
+  (println users)
+  (d/div {:style {:margin-top "20px"}}
+    (d/h3 "Users")
+    (if (empty? users)
+      (d/p "Loading users...")
+      (d/table {:style {:border-collapse "collapse"
+                        :width "100%"
+                        :border "1px solid #ddd"}}
+        (d/thead
+          (d/tr
+            (d/th {:style {:border "1px solid #ddd"
+                           :padding "8px"
+                           :background-color "#f2f2f2"
+                           :text-align "left"}} "Email")
+            (d/th {:style {:border "1px solid #ddd"
+                           :padding "8px"
+                           :background-color "#f2f2f2"
+                           :text-align "left"}} "First Name")
+            (d/th {:style {:border "1px solid #ddd"
+                           :padding "8px"
+                           :background-color "#f2f2f2"
+                           :text-align "left"}} "Last Name")))
+        (d/tbody
+          (map-indexed
+            (fn [idx user] (d/tr {:key idx}
+              (d/td {:style {:border "1px solid #ddd"
+                             :padding "8px"}} (.-email user))
+              (d/td {:style {:border "1px solid #ddd"
+                             :padding "8px"}} (aget user "first-name"))
+              (d/td {:style {:border "1px solid #ddd"
+                             :padding "8px"}} (aget user "last-name"))))
+                       users))))))
+
+(defn fetch-users [email password]
+  (let [auth-header (str "Basic " (js/btoa (str email ":" password)))
+        headers (js/Object.)]
+    (set! (.-Authorization headers) auth-header)
+    (set! (.-Content-Type headers) "application/json")
+    (-> (js/fetch "/api/users/get" 
+                  (js/Object. #js {:method "GET"
+                                   :headers headers}))
+        (.then #(.json %))
+        (.catch #(js/console.error "Error fetching users:" %)))))
+
 (defnc main-app
-  [{:keys [is-logged-in set-is-logged-in]}]
-  (let [[selected-link set-selected-link] (hooks/use-state nil)]
+  [{:keys [is-logged-in set-is-logged-in email password]}]
+  (let [[selected-link set-selected-link] (hooks/use-state nil)
+        [users set-users] (hooks/use-state [])]
     (<>
       ;; Top bar with clickable links
       (d/div {:style {:padding "10px"
                       :border-bottom "1px solid #ccc"
                       :margin-bottom "20px"}}
        (let [links
-             (mapv
-               (fn [title]
-                 (d/a {:href "#"
+             (into [] 
+                   (map-indexed
+               (fn [idx title]
+                 (d/a {:key idx
+                       :href "#"
                        :style {:margin-right "20px"
                                :text-decoration "none"
                                :color "#007bff"
                                :cursor "pointer"}
                        :onClick (fn [e]
                                   (.preventDefault e)
-                                  (set-selected-link title))}
+                                  (set-selected-link title)
+                                  (when (= title "Users")
+                                    (-> (fetch-users email password)
+                                        (.then #(set-users %)))))}  
                       title)
                  )
-               ["Projects" "Cases" "Users"])
+               ["Projects" "Cases" "Users"]))
              logout #(set-is-logged-in false)
              logout-button
-             (d/button {:on-click logout}
+             (d/button {:key 100 :on-click logout}
                        "Logout")]
          (conj links logout-button)
          )
         )
       
       ;; Main content
-      ;; Display selected link text below
       (when selected-link
         (d/div {:style {:margin-top "20px"
                         :padding "10px"
                         :background-color "#f8f9fa"
                         :border "1px solid #dee2e6"
                         :border-radius "4px"}}
-               (d/p (str "You clicked: " selected-link)))))))
+               (case selected-link
+                 "Users" ($ users-table {:users users})
+                 (d/p (str "You clicked: " selected-link))))))))
 
 (defnc xtest-app
   []
   (let [[is-logged-in set-is-logged-in] (hooks/use-state false)
         [email set-email] (hooks/use-state "")
-        [password set-password] (hooks/use-state "")]
+        [password set-password] (hooks/use-state "")
+        [logged-in-email set-logged-in-email] (hooks/use-state "")
+        [logged-in-password set-logged-in-password] (hooks/use-state "")]
     
     (if is-logged-in
       ;; Show main app if logged in
-      ($ main-app {:is-logged-in is-logged-in :set-is-logged-in set-is-logged-in})
+      ($ main-app {:is-logged-in is-logged-in 
+                   :set-is-logged-in set-is-logged-in
+                   :email logged-in-email
+                   :password logged-in-password})
       
       ;; Show login form if not logged in
       ($ login-form {:email email
@@ -113,6 +166,9 @@
                                  ;; In real app, this would make API call
                                  (if (and (not= email "") (not= password ""))
                                    (do
+                                     ;; Store credentials for API calls
+                                     (set-logged-in-email email)
+                                     (set-logged-in-password password)
                                      (set-is-logged-in true)
                                      ;; Clear form on successful login
                                      (set-email "")
