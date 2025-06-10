@@ -5,6 +5,10 @@ Web server uses 9090. Ensure starts api server, db server before testing web pag
 
 Start ui and apis server at port 9090
 ```
+# shadow-cljs is used to build the web ui
+npx shadow-cljs watch app
+
+# web server
 clj -X:run-x
 ```
 
@@ -14,6 +18,7 @@ XTDB in docker, saved in local directory. Bi-teimporality.
 ```
 mkdir -p ~/xtest-xtdb-data
 
+# start xtdb in docker
 # 5432: Postgres wire-compatible server (primary API)
 # 8080: Monitoring/healthz HTTP endpoints
 # 3000: HTTP query/tx API
@@ -23,6 +28,9 @@ docker run -it --pull=always \
 -p 3000:3000 \
 -v ~/xtest-xtdb-data:/var/lib/xtdb \
 ghcr.io/xtdb/xtdb
+
+# run psql to connect to the database
+psql -h localhost -U xtdb xtdb
 
 ```
 
@@ -75,7 +83,7 @@ Each test run contains: case_id, start_time, end_time, logs, result
 * reports
 
 A report is usually the aggregated results of a test run.
-
+gi
 * attachments
 
 Each case, tests run, test run, project, report can have a number attachments linked to them.
@@ -87,7 +95,7 @@ clojure -M:test   -n xtest.case-test
 
 # create a user (first, no basic token passed)
 curl -i -X POST http://localhost:9090/api/users/create          -H "Content-Type: application/json"          -d '{
-               "first-name": "Alice",
+               "first-name": "Alice",t
                "last-name" : "Smith3",
                "email"     : "alice.smith3@example.com",
                "password"  : "Secur3P@ssword!"}'

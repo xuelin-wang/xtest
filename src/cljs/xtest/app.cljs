@@ -383,6 +383,72 @@
                           "Delete"))))
                        users)))))))
 
+(defnc projects-table
+  [{:keys [projects]}]
+  (<>
+    (d/div {:style {:margin-top "20px"}}
+      (d/div {:style {:display "flex"
+                      :justify-content "space-between"
+                      :align-items "center"
+                      :margin-bottom "15px"}}
+        (d/h3 {:style {:margin 0}} "Projects"))
+      (if (empty? projects)
+        (d/p "Loading projects...")
+        (d/table {:style {:border-collapse "collapse"
+                          :width "100%"
+                          :border "1px solid #ddd"}}
+          (d/thead
+            (d/tr
+              (d/th {:style {:border "1px solid #ddd"
+                             :padding "8px"
+                             :background-color "#f2f2f2"
+                             :text-align "left"}} "ID")
+              (d/th {:style {:border "1px solid #ddd"
+                             :padding "8px"
+                             :background-color "#f2f2f2"
+                             :text-align "left"}} "Name")))
+          (d/tbody
+            (map-indexed
+              (fn [idx project] (d/tr {:key idx}
+                (d/td {:style {:border "1px solid #ddd"
+                               :padding "8px"}} (.-id project))
+                (d/td {:style {:border "1px solid #ddd"
+                               :padding "8px"}} (.-name project))))
+                         projects)))))))
+
+(defnc cases-table
+  [{:keys [cases]}]
+  (<>
+    (d/div {:style {:margin-top "20px"}}
+      (d/div {:style {:display "flex"
+                      :justify-content "space-between"
+                      :align-items "center"
+                      :margin-bottom "15px"}}
+        (d/h3 {:style {:margin 0}} "Cases"))
+      (if (empty? cases)
+        (d/p "Loading cases...")
+        (d/table {:style {:border-collapse "collapse"
+                          :width "100%"
+                          :border "1px solid #ddd"}}
+          (d/thead
+            (d/tr
+              (d/th {:style {:border "1px solid #ddd"
+                             :padding "8px"
+                             :background-color "#f2f2f2"
+                             :text-align "left"}} "Case ID")
+              (d/th {:style {:border "1px solid #ddd"
+                             :padding "8px"
+                             :background-color "#f2f2f2"
+                             :text-align "left"}} "Case Name")))
+          (d/tbody
+            (map-indexed
+              (fn [idx case] (d/tr {:key idx}
+                (d/td {:style {:border "1px solid #ddd"
+                               :padding "8px"}} (aget case "id"))
+                (d/td {:style {:border "1px solid #ddd"
+                               :padding "8px"}} (aget case "name"))))
+                         cases)))))))
+
 (defn fetch-users [email password]
   (let [auth-header (str "Basic " (js/btoa (str email ":" password)))
         headers (js/Object.)]
@@ -394,10 +460,34 @@
         (.then #(.json %))
         (.catch #(js/console.error "Error fetching users:" %)))))
 
+(defn fetch-projects [email password]
+  (let [auth-header (str "Basic " (js/btoa (str email ":" password)))
+        headers (js/Object.)]
+    (set! (.-Authorization headers) auth-header)
+    (set! (.-Content-Type headers) "application/json")
+    (-> (js/fetch "/api/projects/get" 
+                  (js/Object. #js {:method "GET"
+                                   :headers headers}))
+        (.then #(.json %))
+        (.catch #(js/console.error "Error fetching projects:" %)))))
+
+(defn fetch-cases [email password]
+  (let [auth-header (str "Basic " (js/btoa (str email ":" password)))
+        headers (js/Object.)]
+    (set! (.-Authorization headers) auth-header)
+    (set! (.-Content-Type headers) "application/json")
+    (-> (js/fetch "/api/cases/get" 
+                  (js/Object. #js {:method "GET"
+                                   :headers headers}))
+        (.then #(.json %))
+        (.catch #(js/console.error "Error fetching cases:" %)))))
+
 (defnc main-app
   [{:keys [is-logged-in set-is-logged-in email password]}]
   (let [[selected-link set-selected-link] (hooks/use-state nil)
-        [users set-users] (hooks/use-state [])]
+        [users set-users] (hooks/use-state [])
+        [projects set-projects] (hooks/use-state [])
+        [cases set-cases] (hooks/use-state [])]
     (<>
       ;; Top bar with clickable links
       (d/div {:style {:padding "10px"
@@ -418,7 +508,13 @@
                                   (set-selected-link title)
                                   (when (= title "Users")
                                     (-> (fetch-users email password)
-                                        (.then #(set-users %)))))}  
+                                        (.then #(set-users %))))
+                                  (when (= title "Projects")
+                                    (-> (fetch-projects email password)
+                                        (.then #(set-projects %))))
+                                  (when (= title "Cases")
+                                    (-> (fetch-cases email password)
+                                        (.then #(set-cases %)))))}  
                       title)
                  )
                ["Projects" "Cases" "Users"]))
@@ -444,6 +540,8 @@
                                           :on-user-deleted (fn []
                                                              (-> (fetch-users email password)
                                                                  (.then #(set-users %))))})
+                 "Projects" ($ projects-table {:projects projects})
+                 "Cases" ($ cases-table {:cases cases})
                  (d/p (str "You clicked: " selected-link))))))))
 
 (defnc xtest-app
