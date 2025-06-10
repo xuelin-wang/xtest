@@ -6,7 +6,7 @@
            ))
 
 (defnc login-form
-  [{:keys [email password on-email-change on-password-change on-login]}]
+  [{:keys [email password on-email-change on-password-change on-login error-message]}]
   (d/div {:style {:max-width "400px"
                   :margin "50px auto"
                   :padding "20px"
@@ -37,6 +37,15 @@
                           :border "1px solid #ccc"
                           :border-radius "4px"
                           :box-sizing "border-box"}}))
+      (when error-message
+        (d/div {:style {:color "#dc3545"
+                        :font-size "14px"
+                        :margin-bottom "15px"
+                        :padding "8px"
+                        :background-color "#f8d7da"
+                        :border "1px solid #f5c6cb"
+                        :border-radius "4px"}}
+               error-message))
       (d/button {:type "submit"
                  :style {:width "100%"
                          :padding "10px"
@@ -130,6 +139,16 @@
                                    :body (js/JSON.stringify (clj->js user-data))}))
         (.then #(.json %))
         (.catch #(js/console.error "Error creating user:" %)))))
+
+(defn login-user [email password]
+  (let [headers (js/Headers.)]
+    (.set headers "Content-Type" "application/json")
+    (-> (js/fetch "/api/users/login" 
+                  (js/Object. #js {:method "POST"
+                                   :headers headers
+                                   :body (js/JSON.stringify (clj->js {:email email :password password}))}))
+        (.then #(.json %))
+        (.catch #(js/console.error "Error logging in:" %)))))
 
 (defn delete-user [email password user-id]
   (let [auth-header (str "Basic " (js/btoa (str email ":" password)))
@@ -554,7 +573,8 @@
         [email set-email] (hooks/use-state "")
         [password set-password] (hooks/use-state "")
         [logged-in-email set-logged-in-email] (hooks/use-state "")
-        [logged-in-password set-logged-in-password] (hooks/use-state "")]
+        [logged-in-password set-logged-in-password] (hooks/use-state "")
+        [login-error set-login-error] (hooks/use-state nil)]
     
     (if is-logged-in
       ;; Show main app if logged in
@@ -566,23 +586,27 @@
       ;; Show login form if not logged in
       ($ login-form {:email email
                      :password password
-                     :on-email-change set-email
-                     :on-password-change set-password
+                     :error-message login-error
+                     :on-email-change (fn [new-email]
+                                        (set-email new-email)
+                                        (set-login-error nil))
+                     :on-password-change (fn [new-password]
+                                           (set-password new-password)
+                                           (set-login-error nil))
                      :on-login (fn []
-                                 ;; Simple login logic - for demo purposes
-                                 ;; In real app, this would make API call
+                                 (set-login-error nil)
                                  (if (and (not= email "") (not= password ""))
-                                   (do
-                                     ;; Store credentials for API calls
-                                     (set-logged-in-email email)
-                                     (set-logged-in-password password)
-                                     (set-is-logged-in true)
-                                     ;; Clear form on successful login
-                                     (set-email "")
-                                     (set-password ""))
-                                   ;; Login failed - stay on login screen
-                                   ;; Could add error message here
-                                   (js/alert "Login failed. Please enter valid email and password.")))}))))
+                                   (-> (login-user email password)
+                                       (.then (fn [result]
+                                                (if (.-error result)
+                                                  (set-login-error (.-error result))
+                                                  (do
+                                                    (set-logged-in-email email)
+                                                    (set-logged-in-password password)
+                                                    (set-is-logged-in true)
+                                                    (set-email "")
+                                                    (set-password ""))))))
+                                   (set-login-error "Please enter both email and password.")))}))))
 
 (defn ^:export init []
   (let [root (rdom/createRoot (js/document.getElementById "app"))]
