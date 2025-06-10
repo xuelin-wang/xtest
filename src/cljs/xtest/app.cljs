@@ -502,7 +502,11 @@
                        :style {:margin-right "20px"
                                :text-decoration "none"
                                :color "#007bff"
-                               :cursor "pointer"}
+                               :cursor "pointer"
+                               :padding-bottom "5px"
+                               :border-bottom (if (= selected-link title) 
+                                                "2px solid red" 
+                                                "2px solid transparent")}
                        :onClick (fn [e]
                                   (.preventDefault e)
                                   (set-selected-link title)
