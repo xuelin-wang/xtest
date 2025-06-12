@@ -1,21 +1,40 @@
 (ns xtest.api.case
   (:require [xtest.api.db :as db]
             [xtest.api.util :as util]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [malli.core :as m]
+            [malli.error :as me]
+            [clojure.pprint :refer [pprint]]))
+
+(def s-non-empty-string
+  [:and string? [:fn {:error/message "must be non-empty"} (complement clojure.string/blank?)]])
+
+(def s-step
+  [:map {:closed true}
+   [:description s-non-empty-string]
+   [:precondition {:optional true} [:maybe string?]]
+   [:postcondition {:optional true} [:maybe string?]]])
 
 (defn- valid-step?
   "Validates that a step has required description field. Precondition and postcondition are optional."
   [step]
-  (and (map? step)
-       (not (str/blank? (:description step)))
-       (contains? step :precondition)
-       (contains? step :postcondition)))
+  (if (m/validate s-step step)
+    {:value true}
+    (let [error (me/humanize (m/explain s-step step))]
+      (println "Invalid step:" error)
+      {:value false
+       :error "Invalid step format"
+       :details error})))
 
 (defn- valid-steps?
   "Validates that steps is a vector of valid step maps"
   [steps]
-  (and (vector? steps)
-       (every? valid-step? steps)))
+  (if (vector? steps)
+    (let [valid-steps (map valid-step? steps)]
+      (every? :value valid-steps)
+      )
+    false
+    ))
 
 (defn- valid-tags?
   "Validates that tags is a vector of strings"

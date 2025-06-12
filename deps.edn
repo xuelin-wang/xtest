@@ -15,6 +15,8 @@
         ;; https://mvnrepository.com/artifact/org.clojure/data.codec
         org.clojure/data.codec {:mvn/version "0.2.0"}
         cheshire/cheshire {:mvn/version "6.0.0"}
+
+        metosin/malli {:mvn/version "0.19.1"}
         
         com.password4j/password4j {:mvn/version "1.8.2"}
         
