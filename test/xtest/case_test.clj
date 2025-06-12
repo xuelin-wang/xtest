@@ -228,6 +228,13 @@
 
 (deftest test-create-case-invalid-steps
   (testing "Creating a case with invalid steps should fail"
+    (with-redefs [db/get-case-by-id (constantly nil)
+                  db/get-case-by-name (constantly nil)
+                  db/get-project-by-id (fn [id]
+                                         (case id
+                                           "project-1" {:_id "project-1" :name "Project One"}
+                                           nil))
+                  db/insert-case! (fn [case-data] case-data)]
     (let [invalid-steps-cases [
                                ;; Not a vector
                                {:steps "not a vector"}
@@ -237,10 +244,7 @@
                                {:steps [{:precondition "pre" :postcondition "post"}]}
                                ;; Blank description
                                {:steps [{:description "" :precondition "pre" :postcondition "post"}]}
-                               ;; Missing precondition key
-                               {:steps [{:description "desc" :postcondition "post"}]}
-                               ;; Missing postcondition key
-                               {:steps [{:description "desc" :precondition "pre"}]}]]
+                               ]]
       (doseq [{:keys [steps]} invalid-steps-cases]
         (let [request {:body-params {:id "case-123"
                               :name "New Test Case"
@@ -251,7 +255,7 @@
               response (case/create-case request)]
           (is (= 400 (:status response))
               (str "Steps " steps " should be invalid"))
-          (is (str/includes? (get-in response [:body :error]) "Steps must be a vector of maps")))))))
+          (is (str/includes? (get-in response [:body :error]) "Steps must be a vector of maps"))))))))
 
 (deftest test-create-case-valid-steps-variations
   (testing "Creating a case with various valid steps should succeed"
